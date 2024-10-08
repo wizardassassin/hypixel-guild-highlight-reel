@@ -39,6 +39,7 @@ export async function getGuildEndpointData(
         exp: guild.exp as number,
         guildExpByGameType,
         members,
+        json,
     };
 }
 
@@ -275,6 +276,7 @@ export async function getPlayerEndpointData(uuid: string) {
         uuid: String(player.uuid),
         username: String(player.displayname),
         playerStats,
+        json,
     };
 }
 

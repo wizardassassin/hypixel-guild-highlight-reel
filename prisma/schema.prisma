@@ -21,6 +21,8 @@ model PlayerStats {
   playerId     String
   GuildStats   GuildStats @relation(fields: [guildStatsId], references: [id], onDelete: Cascade)
   guildStatsId String
+
+  @@unique([createdAt, playerId, guildStatsId])
 }
 
 model Player {
@@ -41,6 +43,10 @@ model GuildStats {
 
   guild   Guild  @relation(fields: [guildId], references: [id], onDelete: Cascade)
   guildId String
+
+  rawDataHash String
+
+  @@unique([createdAt, guildId])
 }
 
 model Guild {

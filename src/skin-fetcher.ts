@@ -31,7 +31,7 @@ const fetchBlob = async (url: string): Promise<Blob> => {
 export const fetchUUID = (username: string) =>
     fetchJson(
         `https://api.mojang.com/users/profiles/minecraft/${username}`
-    ).then((json) => json.id);
+    ).then((json) => json.id as string);
 
 const fetchSkinURL = (uuid: any) =>
     fetchJson(

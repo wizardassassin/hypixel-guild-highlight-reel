@@ -1,4 +1,7 @@
 import prisma from "./db.js";
+import fs from "fs/promises";
+import crypto from "crypto";
+import zlib from "zlib";
 import {
     getGuildEndpointData,
     getPlayerEndpointData,
@@ -15,7 +18,7 @@ export async function createGuild(discordGuildID: string, playerUUID: string) {
             createdAtHypixel: guildData.created,
         },
     });
-    return guild.id;
+    return { id: guild.id, name: guildData.name };
 }
 
 /**
@@ -23,10 +26,11 @@ export async function createGuild(discordGuildID: string, playerUUID: string) {
  *
  */
 export async function updateGuilds() {
+    const date = new Date();
+    date.setUTCMinutes(0, 0, 0);
     const guilds = await prisma.guild.findMany();
     for (const guild of guilds) {
         const guildIdHypixel = guild.guildIdHypixel;
-        console.time("Fetch");
         const guildData = await getGuildEndpointData(guildIdHypixel, "GUILD");
         const playerData: [
             PlayerEndpointType,
@@ -40,8 +44,6 @@ export async function updateGuilds() {
                 "",
             ]);
         }
-        console.timeEnd("Fetch");
-        console.time("Database");
         for (const player of playerData) {
             const { id } = await prisma.player.upsert({
                 where: {
@@ -67,9 +69,16 @@ export async function updateGuilds() {
                 name: guildData.name,
             },
         });
+        const rawData = JSON.stringify({
+            guildData: guildData.json,
+            playerData: playerData.map((x) => x[0].json),
+        });
+        const hash = crypto.createHash("sha256").update(rawData).digest("hex");
+        await fs.writeFile(`./blob/${hash}`, zlib.gzipSync(rawData));
         await prisma.guildStats.create({
             data: {
                 guildId: guild.id,
+                createdAt: date,
                 experience: guildData.exp,
                 experienceByGameType: Buffer.from(
                     JSON.stringify(guildData.guildExpByGameType)
@@ -78,6 +87,7 @@ export async function updateGuilds() {
                     createMany: {
                         data: playerData.map((x) => ({
                             playerId: x[2],
+                            createdAt: date,
                             playerStats: Buffer.from(
                                 JSON.stringify(x[0].playerStats)
                             ),
@@ -86,8 +96,8 @@ export async function updateGuilds() {
                         })),
                     },
                 },
+                rawDataHash: hash,
             },
         });
-        console.timeEnd("Database");
     }
 }

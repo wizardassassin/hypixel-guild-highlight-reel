@@ -1,5 +1,6 @@
 import {
     ChatInputCommandInteraction,
+    EmbedBuilder,
     InteractionContextType,
     SlashCommandBuilder,
 } from "discord.js";
@@ -68,13 +69,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     if (statDiff["experience"] === 0) {
         delete statDiff["experience"];
     }
-    for (const key of Object.keys(statDiff).filter((x) =>
-        x.endsWith("WithTourney")
-    )) {
-        delete statDiff[key];
-    }
     console.log(statDiff);
-    await interaction.reply(
-        "```json\n" + JSON.stringify(statDiff, null, 4) + "```"
+    const embed = new EmbedBuilder().addFields(
+        ...Object.entries(statDiff).map(([key, value]) => ({
+            name: key,
+            value: String(value),
+        }))
     );
+    await interaction.reply({
+        embeds: [embed],
+    });
 }
