@@ -1,0 +1,54 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model PlayerStats {
+  id                 String   @id @default(uuid())
+  createdAt          DateTime @default(now())
+  playerStats        Bytes
+  experience         Int
+  questParticipation Int
+
+  player       Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  playerId     String
+  GuildStats   GuildStats @relation(fields: [guildStatsId], references: [id], onDelete: Cascade)
+  guildStatsId String
+}
+
+model Player {
+  id       String   @id @default(uuid())
+  uuid     String   @unique
+  username String
+  joined   DateTime
+
+  PlayerStats PlayerStats[]
+}
+
+model GuildStats {
+  id                   String        @id @default(uuid())
+  createdAt            DateTime      @default(now())
+  experience           Int
+  experienceByGameType Bytes
+  members              PlayerStats[]
+
+  guild   Guild  @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  guildId String
+}
+
+model Guild {
+  id               String   @id @default(uuid())
+  guildIdDiscord   String   @unique
+  guildIdHypixel   String   @unique
+  name             String
+  createdAtHypixel DateTime
+
+  GuildStats GuildStats[]
+}
