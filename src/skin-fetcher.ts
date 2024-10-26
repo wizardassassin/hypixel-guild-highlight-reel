@@ -12,7 +12,10 @@ import {
  */
 const fetchJson = async (url: string): Promise<any> => {
     const res = await fetch(url, { signal: AbortSignal.timeout(60000) });
-    if (!res.ok) throw new Error("Invalid Response Code");
+    if (!res.ok) {
+        console.error(await res.text(), res.status);
+        throw new Error("Invalid Response Code");
+    }
     const json = await res.json();
     return json;
 };
@@ -23,7 +26,10 @@ const fetchJson = async (url: string): Promise<any> => {
  */
 const fetchBlob = async (url: string): Promise<Blob> => {
     const res = await fetch(url, { signal: AbortSignal.timeout(60000) });
-    if (!res.ok) throw new Error("Invalid Response Code");
+    if (!res.ok) {
+        console.error(await res.text(), res.status);
+        throw new Error("Invalid Response Code");
+    }
     const blob = await res.blob();
     return blob;
 };
@@ -120,9 +126,13 @@ const getHead = (skin: Canvas, size = 24) => {
     return canvas.toBuffer();
 };
 
-export const getAvatar = async (username: string, size = 24) => {
+export const getAvatar = async (
+    username: string,
+    size = 24,
+    isUUID = false
+) => {
     try {
-        const uuid = await fetchUUID(username);
+        const uuid = isUUID ? username : await fetchUUID(username);
         const url = await fetchSkinURL(uuid);
         const url2 = new URL(url);
         url2.protocol = "https:";

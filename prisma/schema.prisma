@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,28 +7,39 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model HousingCache {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  cookies   Int
+  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  playerId  String   @unique
+}
+
 model PlayerStats {
-  id                 String   @id @default(uuid())
-  createdAt          DateTime @default(now())
+  id                 String     @id @default(uuid())
+  createdAt          DateTime   @default(now())
   playerStats        Bytes
   experience         Int
   questParticipation Int
-
-  player       Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  playerId     String
-  GuildStats   GuildStats @relation(fields: [guildStatsId], references: [id], onDelete: Cascade)
-  guildStatsId String
+  skyblockExperience Int
+  housingCookies     Int
+  playerId           String
+  guildStatsId       String
+  GuildStats         GuildStats @relation(fields: [guildStatsId], references: [id], onDelete: Cascade)
+  player             Player     @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   @@unique([createdAt, playerId, guildStatsId])
 }
 
 model Player {
-  id       String   @id @default(uuid())
-  uuid     String   @unique
-  username String
-  joined   DateTime
-
-  PlayerStats PlayerStats[]
+  id            String        @id @default(uuid())
+  uuid          String        @unique
+  username      String
+  prefix        String
+  joined        DateTime
+  initialJoined DateTime
+  PlayerStats   PlayerStats[]
+  HousingCache  HousingCache?
 }
 
 model GuildStats {
@@ -39,22 +47,20 @@ model GuildStats {
   createdAt            DateTime      @default(now())
   experience           Int
   experienceByGameType Bytes
+  guildId              String
+  rawDataHash          String
+  guild                Guild         @relation(fields: [guildId], references: [id], onDelete: Cascade)
   members              PlayerStats[]
-
-  guild   Guild  @relation(fields: [guildId], references: [id], onDelete: Cascade)
-  guildId String
-
-  rawDataHash String
 
   @@unique([createdAt, guildId])
 }
 
 model Guild {
-  id               String   @id @default(uuid())
-  guildIdDiscord   String   @unique
-  guildIdHypixel   String   @unique
+  id               String       @id @default(uuid())
+  guildIdDiscord   String       @unique
+  channelIdDiscord String       @unique
+  guildIdHypixel   String       @unique
   name             String
   createdAtHypixel DateTime
-
-  GuildStats GuildStats[]
+  GuildStats       GuildStats[]
 }

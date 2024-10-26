@@ -1,5 +1,100 @@
 import fs from "fs/promises";
+import { sleep } from "./utils.js";
 // TODO: housing, skyblock
+
+export type PlayerStatsType = PlayerEndpointType["playerStats"];
+
+export class HypixelFetcher {
+    static #instance: HypixelFetcher;
+    rateLimitLimit: number;
+    rateLimitRemaining: number;
+    rateLimitReset: number;
+    lastFetch: Date;
+    logRemaining: boolean;
+    constructor() {
+        this.rateLimitLimit = -1;
+        this.rateLimitRemaining = -1;
+        this.rateLimitReset = -1;
+        this.lastFetch = new Date(0);
+        this.logRemaining = true;
+    }
+    static get instance() {
+        if (!this.#instance) return (this.#instance = new HypixelFetcher());
+        return this.#instance;
+    }
+    #parseJson(text: string, noThrow = false) {
+        try {
+            const json = JSON.parse(text);
+            return json;
+        } catch (error) {
+            console.error(text);
+            if (!noThrow) throw error;
+        }
+    }
+    async #waitReset(date: Date) {
+        if (this.rateLimitRemaining !== 0) return;
+        const timeRemaining =
+            this.rateLimitReset * 1000 -
+            (date.getTime() - this.lastFetch.getTime());
+        if (timeRemaining > 0) {
+            console.log(
+                "Rate Limit Reached. Waiting " +
+                    (timeRemaining / 1000).toFixed(1) +
+                    " seconds."
+            );
+            await sleep(timeRemaining + 1000); // added one buffer second
+            this.logRemaining = true;
+        }
+    }
+    /**
+     * Called one at a time
+     *
+     */
+    async fetchURL(url: string) {
+        const date = new Date();
+        await this.#waitReset(date);
+        try {
+            const res = await fetch(url, {
+                headers: {
+                    "API-Key": process.env.HYPIXEL_API_KEY,
+                },
+            });
+            if (!res.ok) {
+                console.error("Response Code: " + res.status);
+                const text = await res.text();
+                console.error(this.#parseJson(text, true));
+                throw new Error("Invalid Response Code: " + res.status);
+            }
+            const text = await res.text();
+            const json = this.#parseJson(text);
+            // if (!json.success) { // the housing api breaks the json.success convention
+            //     console.error(json);
+            //     throw new Error("Unsuccessful Json Response");
+            // }
+            const limit = Number(res.headers.get("RateLimit-Limit"));
+            const remaining = Number(res.headers.get("RateLimit-Remaining"));
+            const reset = Number(res.headers.get("RateLimit-Reset"));
+            if (
+                Number.isFinite(limit) &&
+                Number.isFinite(remaining) &&
+                Number.isFinite(reset)
+            ) {
+                if (this.logRemaining) {
+                    console.log("Remaining Requests: " + remaining);
+                    this.logRemaining = false;
+                }
+                this.rateLimitLimit = limit;
+                this.rateLimitRemaining = remaining;
+                this.rateLimitReset = reset;
+                this.lastFetch = new Date();
+            }
+            return json;
+        } catch (error) {
+            console.error({ url });
+            throw error;
+        }
+    }
+}
 
 export type GuildEndpointType = Awaited<
     ReturnType<typeof getGuildEndpointData>
@@ -13,12 +108,11 @@ export async function getGuildEndpointData(
         idType === "PLAYER"
             ? `https://api.hypixel.net/v2/guild?player=${uuid}`
             : `https://api.hypixel.net/v2/guild?id=${uuid}`;
-    const res = await fetch(url, {
-        headers: {
-            "API-Key": process.env.HYPIXEL_API_KEY,
-        },
-    });
-    const json = await res.json();
+    const json = await HypixelFetcher.instance.fetchURL(url);
+    return parseGuildEndpointData(json);
+}
+
+export function parseGuildEndpointData(json: any) {
     const guild = json.guild;
     const members = (guild.members as any[]).map((x) => ({
         uuid: x.uuid as string,
@@ -43,241 +137,447 @@ export async function getGuildEndpointData(
     };
 }
 
+const removeUUIDDashes = (uuid: string) => uuid.replace(/-/g, "");
+
+export async function getSkyBlockEndpointData(uuid: string) {
+    const json = await HypixelFetcher.instance.fetchURL(
+        `https://api.hypixel.net/v2/skyblock/profiles?uuid=${uuid}`
+    );
+    return parseSkyBlockEndpointData(json, uuid);
+}
+
+export function parseSkyBlockEndpointData(json: any, uuid: string) {
+    const profiles = json.profiles;
+    const uuid2 = removeUUIDDashes(uuid);
+    const profiles2 = ((profiles ?? []) as any[]).map((x) => ({
+        id: x.profile_id as string,
+        experience: Number(x?.members?.[uuid2]?.leveling?.experience ?? 0),
+    }));
+    return {
+        uuid,
+        experience: Math.max(...profiles2.map((x) => x.experience), 0),
+        json,
+    };
+}
+
+export async function getHousingEndpointData(uuid: string) {
+    const json = await HypixelFetcher.instance.fetchURL(
+        `https://api.hypixel.net/v2/housing/houses?player=${uuid}`
+    );
+    return parseHousingEndpointData(json, uuid);
+}
+
+export function parseHousingEndpointData(json: any, uuid: string) {
+    const houses = json;
+    const houses2 = ((houses ?? []) as any[]).map((x) => ({
+        id: x.uuid as string,
+        name: x.name as string,
+        createdAt: x.createdAt as number,
+        cookies: x.cookies.current as number,
+    }));
+    return {
+        uuid,
+        cookies: houses2.map((x) => x.cookies).reduce((a, b) => a + b, 0),
+        json,
+    };
+}
+
 export type PlayerEndpointType = Awaited<
     ReturnType<typeof getPlayerEndpointData>
 >;
 
 export async function getPlayerEndpointData(uuid: string) {
-    const res = await fetch(`https://api.hypixel.net/v2/player?uuid=${uuid}`, {
-        headers: {
-            "API-Key": process.env.HYPIXEL_API_KEY,
-        },
-    });
-    const json = await res.json();
-    // await fs.writeFile("./player.json", JSON.stringify(json, null, 4));
+    const json = await HypixelFetcher.instance.fetchURL(
+        `https://api.hypixel.net/v2/player?uuid=${uuid}`
+    );
+    return parsePlayerEndpointData(json);
+}
+
+export function parsePlayerEndpointData(json: any) {
     const player = json.player;
     const stats = player.stats;
     const playerStats = {
         achievementPoints: Number(player.achievementPoints ?? 0),
-        arcadeWins: getArcadeWins(stats?.Arcade),
-        arcadeWinsWithTourney:
-            getArcadeWins(stats?.Arcade) +
-            Number(stats?.Arcade?.wins_grinch_simulator_v2_tourney ?? 0) +
-            Number(
-                stats?.Arcade
-                    ?.wins_grinch_simulator_v2_tourney_grinch_simulator_1 ?? 0
-            ) +
-            Number(
-                stats?.Arcade
-                    ?.wins_grinch_simulator_v2_tourney_grinch_simulator_1 ?? 0
-            ) +
-            Number(stats?.Arcade?.wins_tourney_mini_walls_0 ?? 0) +
-            Number(stats?.Arcade?.wins_ss_SANTA_SIMULATOR ?? 0) +
-            Number(stats?.Arcade?.wins_santa_simulator ?? 0), // wins_ss_SANTA_SIMULATOR wins_santa_simulator ??
-        arenaBrawlWins: Number(stats?.Arena?.wins ?? 0),
-        arenaBrawlKills:
-            Number(stats?.Arena?.kills_1v1 ?? 0) +
-            Number(stats?.Arena?.kills_2v2 ?? 0) +
-            Number(stats?.Arena?.kills_4v4 ?? 0),
-        bedWarsExp: Number(stats?.Bedwars?.Experience ?? 0),
-        bedWarsLevel: getBedWarsLevel(Number(stats?.Bedwars?.Experience ?? 0)),
-        bedWarsWins: Number(stats?.Bedwars?.wins_bedwars ?? 0),
-        bedWarsWinsWithTourney:
-            Number(stats?.Bedwars?.wins_bedwars ?? 0) +
-            Number(stats?.Bedwars?.tourney_bedwars4s_0_wins_bedwars ?? 0) +
-            Number(
-                stats?.Bedwars?.tourney_bedwars_two_four_0_wins_bedwars ?? 0
-            ) +
-            Number(stats?.Bedwars?.tourney_bedwars4s_1_wins_bedwars ?? 0) +
-            Number(
-                stats?.Bedwars?.tourney_bedwars_eight_two_0_wins_bedwars ?? 0
-            ) +
-            Number(
-                stats?.Bedwars?.tourney_bedwars_eight_two_1_wins_bedwars ?? 0
-            ),
-        bedWarsKills: Number(stats?.Bedwars?.kills_bedwars ?? 0),
-        bedWarsKillsWithTourney:
-            Number(stats?.Bedwars?.kills_bedwars ?? 0) +
-            Number(stats?.Bedwars?.tourney_bedwars4s_0_kills_bedwars ?? 0) +
-            Number(
-                stats?.Bedwars?.tourney_bedwars_two_four_0_kills_bedwars ?? 0
-            ) +
-            Number(stats?.Bedwars?.tourney_bedwars4s_1_kills_bedwars ?? 0) +
-            Number(
-                stats?.Bedwars?.tourney_bedwars_eight_two_0_kills_bedwars ?? 0
-            ) +
-            Number(
-                stats?.Bedwars?.tourney_bedwars_eight_two_1_kills_bedwars ?? 0
-            ),
-        blitzSGKills: Number(stats?.HungerGames?.kills ?? 0),
-        blitzSGKillsWithTourney:
-            Number(stats?.HungerGames?.kills ?? 0) +
-            Number(stats?.HungerGames?.tourney_blitz_duo_0_kills ?? 0) +
-            Number(stats?.HungerGames?.tourney_blitz_duo_1_kills_teams ?? 0) +
-            Number(stats?.HungerGames?.tourney_blitz_duo_2_kills_teams ?? 0),
-        blitzSGWins:
-            Number(stats?.HungerGames?.wins_solo_normal ?? 0) +
-            Number(stats?.HungerGames?.wins_teams ?? 0),
-        blitzSGWinsWithTourney:
-            Number(stats?.HungerGames?.wins_solo_normal ?? 0) +
-            Number(stats?.HungerGames?.wins_teams ?? 0) +
-            Number(stats?.HungerGames?.wins_solo_chaos ?? 0) +
-            Number(stats?.HungerGames?.tourney_blitz_duo_0_wins_teams ?? 0) +
-            Number(stats?.HungerGames?.tourney_blitz_duo_1_wins_teams ?? 0) +
-            Number(stats?.HungerGames?.tourney_blitz_duo_2_wins_teams ?? 0),
-        buildBattleScore: Number(stats?.BuildBattle?.score ?? 0),
-        buildBattleWins: Number(stats?.BuildBattle?.wins ?? 0),
-        copsAndCrimsKills:
-            Number(stats?.MCGO?.kills ?? 0) +
-            Number(stats?.MCGO?.kills_deathmatch ?? 0) +
-            Number(stats?.MCGO?.kills_gungame ?? 0),
-        copsAndCrimsKillsWithTourney:
-            Number(stats?.MCGO?.kills ?? 0) +
-            Number(stats?.MCGO?.kills_deathmatch ?? 0) +
-            Number(stats?.MCGO?.kills_gungame ?? 0) +
-            Number(stats?.MCGO?.kills_tourney_mcgo_defusal_0 ?? 0) +
-            Number(stats?.MCGO?.kills_tourney_mcgo_defusal_1 ?? 0),
-        copsAndCrimsWins:
-            Number(stats?.MCGO?.kills ?? 0) +
-            Number(stats?.MCGO?.kills_deathmatch ?? 0) +
-            Number(stats?.MCGO?.kills_gungame ?? 0),
-        copsAndCrimsWinsWithTourney:
-            Number(stats?.MCGO?.kills ?? 0) +
-            Number(stats?.MCGO?.kills_deathmatch ?? 0) +
-            Number(stats?.MCGO?.kills_gungame ?? 0) +
-            Number(stats?.MCGO?.game_wins_tourney_mcgo_defusal_0 ?? 0) +
-            Number(stats?.MCGO?.game_wins_tourney_mcgo_defusal_1 ?? 0),
-        duelsWins: Number(stats?.Duels?.wins ?? 0),
-        duelsKills: Number(stats?.Duels?.kills ?? 0),
-        hypixelExp: Number(player.networkExp ?? 0),
+        hypixelExperience: Number(player.networkExp ?? 0),
         hypixelLevel: getNetworkLevel(Number(player.networkExp ?? 0)),
         karma: Number(player.karma ?? 0),
-        megaWallsWins: Number(stats?.Walls3?.wins ?? 0), // tourney included
-        megaWallsKills: Number(stats?.Walls3?.kills ?? 0),
-        murderMysteryWins: Number(stats?.MurderMystery?.wins ?? 0),
-        paintballKills: Number(stats?.Paintball?.kills),
-        paintballWins: Number(stats?.Paintball?.wins),
-        pitExp: Number(stats?.Pit?.profile?.xp ?? 0),
-        pitPrestige: Number(stats?.Pit?.profile?.prestiges?.length ?? 0),
-        pitKills: Number(stats?.Pit?.pit_stats_ptl?.kills ?? 0),
-        quakecraftKills:
-            Number(stats?.Quake?.kills ?? 0) +
-            Number(stats?.Quake?.kills_teams ?? 0),
-        quakecraftKillsWithTourney:
-            Number(stats?.Quake?.kills ?? 0) +
-            Number(stats?.Quake?.kills_teams ?? 0) +
-            Number(stats?.Quake?.kills_solo_tourney ?? 0) +
-            Number(stats?.Quake?.kills_tourney_quake_solo2_1 ?? 0),
-        quakecraftWins:
-            Number(stats?.Quake?.wins ?? 0) +
-            Number(stats?.Quake?.wins_teams ?? 0),
-        quakecraftWinsWithTourney:
-            Number(stats?.Quake?.wins ?? 0) +
-            Number(stats?.Quake?.wins_teams ?? 0) +
-            Number(stats?.Quake?.wins_solo_tourney ?? 0) +
-            Number(stats?.Quake?.wins_tourney_quake_solo2_1 ?? 0),
         questsCompleted: Object.values(player.quests ?? {})
             .map((x: any) => Number(x.completions?.length ?? 0))
             .reduce((a, b) => a + b, 0),
-        skyWarsExp: Number(stats?.SkyWars?.skywars_experience ?? 0),
-        skyWarsLevel: getSkyWarsLevel(
-            Number(stats?.SkyWars?.skywars_experience ?? 0)
-        ),
-        skyWarsLuckyBlockWins: Number(
-            stats?.SkyWars?.lab_win_lucky_blocks_lab ?? 0
-        ),
-        skyWarsWins: Number(stats?.SkyWars?.wins ?? 0),
-        skyWarsWinsWithTourney:
-            Number(stats?.SkyWars?.wins ?? 0) +
-            Number(stats?.SkyWars?.tourney_sw_crazy_solo_0_wins ?? 0) +
-            Number(stats?.SkyWars?.tourney_sw_insane_doubles_0_wins ?? 0) +
-            Number(stats?.SkyWars?.tourney_sw_insane_doubles_1_wins ?? 0) +
-            Number(stats?.SkyWars?.tourney_sw_normal_doubles_0_wins ?? 0),
-        skyWarsKills: Number(stats?.SkyWars?.kills ?? 0),
-        skyWarsKillsWithTourney:
-            Number(stats?.SkyWars?.kills ?? 0) +
-            Number(stats?.SkyWars?.tourney_sw_crazy_solo_0_kills ?? 0) +
-            Number(stats?.SkyWars?.tourney_sw_insane_doubles_0_kills ?? 0) +
-            Number(stats?.SkyWars?.tourney_sw_insane_doubles_1_kills ?? 0) +
-            Number(stats?.SkyWars?.tourney_sw_normal_doubles_0_kills ?? 0),
-        skyblockLevel: Number(player?.achievements?.skyblock_sb_levels ?? 0),
-        smashHeroesLevel: Number(stats?.SuperSmash?.smashLevel ?? 0), // smash_level_total
-        smashHeroesWins: Number(stats?.SuperSmash?.wins ?? 0),
-        smashHeroesKins: Number(stats?.SuperSmash?.kills ?? 0),
-        speedUHCScore: Number(stats?.SpeedUHC?.score ?? 0),
-        speedUHCwins: Number(stats?.SpeedUHC?.wins ?? 0),
-        turboKartRacersTrophies:
-            Number(stats?.GingerBread?.bronze_trophy ?? 0) +
-            Number(stats?.GingerBread?.silver_trophy ?? 0) +
-            Number(stats?.GingerBread?.gold_trophy ?? 0),
-        turboKartRacersTrophiesWithTourney:
-            Number(stats?.GingerBread?.bronze_trophy ?? 0) +
-            Number(stats?.GingerBread?.silver_trophy ?? 0) +
-            Number(stats?.GingerBread?.gold_trophy ?? 0) +
-            Number(
-                stats?.GingerBread?.tourney_gingerbread_solo_0_bronze_trophy ??
-                    0
-            ) +
-            Number(
-                stats?.GingerBread?.tourney_gingerbread_solo_0_silver_trophy ??
-                    0
-            ) +
-            Number(
-                stats?.GingerBread?.tourney_gingerbread_solo_0_gold_trophy ?? 0
-            ) +
-            Number(
-                stats?.GingerBread?.tourney_gingerbread_solo_1_bronze_trophy ??
-                    0
-            ) +
-            Number(
-                stats?.GingerBread?.tourney_gingerbread_solo_1_silver_trophy ??
-                    0
-            ) +
-            Number(
-                stats?.GingerBread?.tourney_gingerbread_solo_1_gold_trophy ?? 0
+        arcade: {
+            wins: getArcadeWins(stats?.Arcade),
+            tournament: {
+                wins:
+                    Number(
+                        stats?.Arcade?.wins_grinch_simulator_v2_tourney ?? 0
+                    ) +
+                    Number(
+                        stats?.Arcade
+                            ?.wins_grinch_simulator_v2_tourney_grinch_simulator_1 ??
+                            0
+                    ) +
+                    Number(
+                        stats?.Arcade
+                            ?.wins_grinch_simulator_v2_tourney_grinch_simulator_1 ??
+                            0
+                    ) +
+                    Number(stats?.Arcade?.wins_tourney_mini_walls_0 ?? 0) +
+                    Number(stats?.Arcade?.wins_ss_SANTA_SIMULATOR ?? 0) +
+                    Number(stats?.Arcade?.wins_santa_simulator ?? 0), // wins_ss_SANTA_SIMULATOR wins_santa_simulator ??
+            },
+        },
+        arenaBrawl: {
+            wins: Number(stats?.Arena?.wins ?? 0),
+            kills:
+                Number(stats?.Arena?.kills_1v1 ?? 0) +
+                Number(stats?.Arena?.kills_2v2 ?? 0) +
+                Number(stats?.Arena?.kills_4v4 ?? 0),
+        },
+        bedWars: {
+            experience: Number(stats?.Bedwars?.Experience ?? 0),
+            level: getBedWarsLevel(Number(stats?.Bedwars?.Experience ?? 0)),
+            wins: Number(stats?.Bedwars?.wins_bedwars ?? 0),
+            kills:
+                Number(stats?.Bedwars?.kills_bedwars ?? 0) +
+                Number(stats?.Bedwars?.final_kills_bedwars ?? 0),
+            tournament: {
+                wins:
+                    Number(
+                        stats?.Bedwars?.tourney_bedwars4s_0_wins_bedwars ?? 0
+                    ) +
+                    Number(
+                        stats?.Bedwars
+                            ?.tourney_bedwars_two_four_0_wins_bedwars ?? 0
+                    ) +
+                    Number(
+                        stats?.Bedwars?.tourney_bedwars4s_1_wins_bedwars ?? 0
+                    ) +
+                    Number(
+                        stats?.Bedwars
+                            ?.tourney_bedwars_eight_two_0_wins_bedwars ?? 0
+                    ) +
+                    Number(
+                        stats?.Bedwars
+                            ?.tourney_bedwars_eight_two_1_wins_bedwars ?? 0
+                    ),
+                kills:
+                    Number(
+                        stats?.Bedwars?.tourney_bedwars4s_0_kills_bedwars ?? 0
+                    ) +
+                    Number(
+                        stats?.Bedwars
+                            ?.tourney_bedwars4s_0_final_kills_bedwars ?? 0
+                    ) +
+                    Number(
+                        stats?.Bedwars
+                            ?.tourney_bedwars_two_four_0_kills_bedwars ?? 0
+                    ) +
+                    Number(
+                        stats?.Bedwars
+                            ?.tourney_bedwars_two_four_0_final_kills_bedwars ??
+                            0
+                    ) +
+                    Number(
+                        stats?.Bedwars?.tourney_bedwars4s_1_kills_bedwars ?? 0
+                    ) +
+                    Number(
+                        stats?.Bedwars
+                            ?.tourney_bedwars4s_1_final_kills_bedwars ?? 0
+                    ) +
+                    Number(
+                        stats?.Bedwars
+                            ?.tourney_bedwars_eight_two_0_kills_bedwars ?? 0
+                    ) +
+                    Number(
+                        stats?.Bedwars
+                            ?.tourney_bedwars_eight_two_0_final_kills_bedwars ??
+                            0
+                    ) +
+                    Number(
+                        stats?.Bedwars
+                            ?.tourney_bedwars_eight_two_1_kills_bedwars ?? 0
+                    ) +
+                    Number(
+                        stats?.Bedwars
+                            ?.tourney_bedwars_eight_two_1_final_kills_bedwars ??
+                            0
+                    ),
+            },
+        },
+        blitzSG: {
+            wins:
+                Number(stats?.HungerGames?.wins_solo_normal ?? 0) +
+                Number(stats?.HungerGames?.wins_teams ?? 0),
+            kills: Number(stats?.HungerGames?.kills ?? 0),
+            tournament: {
+                wins:
+                    // Number(stats?.HungerGames?.wins_solo_chaos ?? 0) +
+                    Number(
+                        stats?.HungerGames?.tourney_blitz_duo_0_wins_teams ?? 0
+                    ) +
+                    Number(
+                        stats?.HungerGames?.tourney_blitz_duo_1_wins_teams ?? 0
+                    ) +
+                    Number(
+                        stats?.HungerGames?.tourney_blitz_duo_2_wins_teams ?? 0
+                    ),
+                kills:
+                    Number(stats?.HungerGames?.tourney_blitz_duo_0_kills ?? 0) +
+                    Number(
+                        stats?.HungerGames?.tourney_blitz_duo_1_kills_teams ?? 0
+                    ) +
+                    Number(
+                        stats?.HungerGames?.tourney_blitz_duo_2_kills_teams ?? 0
+                    ),
+            },
+        },
+        buildBattle: {
+            score: Number(stats?.BuildBattle?.score ?? 0),
+            wins: Number(stats?.BuildBattle?.wins ?? 0),
+        },
+        copsAndCrims: {
+            wins:
+                Number(stats?.MCGO?.game_wins ?? 0) +
+                Number(stats?.MCGO?.game_wins_deathmatch ?? 0) +
+                Number(stats?.MCGO?.game_wins_gungame ?? 0),
+            kills:
+                Number(stats?.MCGO?.kills ?? 0) +
+                Number(stats?.MCGO?.kills_deathmatch ?? 0) +
+                Number(stats?.MCGO?.kills_gungame ?? 0),
+            tournament: {
+                wins:
+                    Number(stats?.MCGO?.game_wins_tourney_mcgo_defusal_0 ?? 0) +
+                    Number(stats?.MCGO?.game_wins_tourney_mcgo_defusal_1 ?? 0),
+                kills:
+                    Number(stats?.MCGO?.kills_tourney_mcgo_defusal_0 ?? 0) +
+                    Number(stats?.MCGO?.kills_tourney_mcgo_defusal_1 ?? 0),
+            },
+        },
+        duels: {
+            wins: Number(stats?.Duels?.wins ?? 0),
+            kills: Number(stats?.Duels?.kills ?? 0),
+        },
+        megaWalls: {
+            wins: Number(stats?.Walls3?.wins ?? 0), // tourney included
+            kills: Number(stats?.Walls3?.kills ?? 0),
+        },
+        murderMystery: {
+            wins: Number(stats?.MurderMystery?.wins ?? 0),
+            kills: Number(stats?.MurderMystery?.kills ?? 0),
+        },
+        paintball: {
+            kills: Number(stats?.Paintball?.kills),
+            wins: Number(stats?.Paintball?.wins),
+        },
+        pit: {
+            experience: Number(stats?.Pit?.profile?.xp ?? 0),
+            prestige: Number(stats?.Pit?.profile?.prestiges?.length ?? 0),
+            kills: Number(stats?.Pit?.pit_stats_ptl?.kills ?? 0),
+        },
+        quakecraft: {
+            wins:
+                Number(stats?.Quake?.wins ?? 0) +
+                Number(stats?.Quake?.wins_teams ?? 0),
+            kills:
+                Number(stats?.Quake?.kills ?? 0) +
+                Number(stats?.Quake?.kills_teams ?? 0),
+            tournament: {
+                wins:
+                    Number(stats?.Quake?.wins_solo_tourney ?? 0) +
+                    Number(stats?.Quake?.wins_tourney_quake_solo2_1 ?? 0),
+                kills:
+                    Number(stats?.Quake?.kills_solo_tourney ?? 0) +
+                    Number(stats?.Quake?.kills_tourney_quake_solo2_1 ?? 0),
+            },
+        },
+        skyWars: {
+            experience: Number(stats?.SkyWars?.skywars_experience ?? 0),
+            level: getSkyWarsLevel(
+                Number(stats?.SkyWars?.skywars_experience ?? 0)
             ),
-        tntGamesWins: Number(stats?.TNTGames?.wins ?? 0),
-        tntGamesWinsWithTourney:
-            Number(stats?.TNTGames?.wins ?? 0) +
-            Number(stats?.TNTGames?.wins_tourney_tnt_run_0 ?? 0) +
-            Number(stats?.TNTGames?.wins_tourney_tnt_run_1 ?? 0),
-        uhcScore: Number(stats?.UHC?.score ?? 0),
-        uhcWins: Number(stats?.UHC?.wins ?? 0),
-        uhcKills: Number(stats?.UHC?.kills ?? 0),
-        vampireZHumanWins: Number(stats?.VampireZ?.human_wins ?? 0),
-        vampireZWins:
-            Number(stats?.VampireZ?.human_wins ?? 0) +
-            Number(stats?.VampireZ?.vampire_wins ?? 0),
-        theWallsWins: Number(stats?.Walls?.wins ?? 0), // tourney included
-        warlordsWins: Number(stats?.Battleground?.wins ?? 0),
-        woolGamesCombinedWins:
-            Number(stats?.WoolGames?.wool_wars?.stats?.wins ?? 0) +
-            Number(
-                stats?.WoolGames?.capture_the_wool?.stats?.experienced_wins ?? 0
-            ) +
-            Number(stats?.WoolGames?.sheep_wars?.stats?.wins ?? 0),
-        woolGamesCombinedWinsWithTourney:
-            Number(stats?.WoolGames?.wool_wars?.stats?.wins ?? 0) +
-            Number(
-                stats?.WoolGames?.capture_the_wool?.stats?.experienced_wins ?? 0
-            ) +
-            Number(stats?.WoolGames?.sheep_wars?.stats?.wins ?? 0) +
-            Number(stats?.WoolGames?.tourney?.wool_wars_0?.wins ?? 0) +
-            Number(stats?.WoolGames?.tourney?.wool_wars_1?.wins ?? 0),
-        woolGamesExp: Number(stats?.WoolGames?.progression?.experience ?? 0),
-        woolGamesLevel: getWoolGamesLevel(
-            Number(stats?.WoolGames?.progression?.experience ?? 0)
-        ),
-        skyClashWins: Number(stats?.SkyClash?.wins ?? 0),
-        crazyWallsWins: Number(stats?.TrueCombat?.wins ?? 0),
+            wins: Number(stats?.SkyWars?.wins ?? 0),
+            kills: Number(stats?.SkyWars?.kills ?? 0),
+            tournament: {
+                wins:
+                    Number(stats?.SkyWars?.tourney_sw_crazy_solo_0_wins ?? 0) +
+                    Number(
+                        stats?.SkyWars?.tourney_sw_insane_doubles_0_wins ?? 0
+                    ) +
+                    Number(
+                        stats?.SkyWars?.tourney_sw_insane_doubles_1_wins ?? 0
+                    ) +
+                    Number(
+                        stats?.SkyWars?.tourney_sw_normal_doubles_0_wins ?? 0
+                    ),
+                kills:
+                    Number(stats?.SkyWars?.tourney_sw_crazy_solo_0_kills ?? 0) +
+                    Number(
+                        stats?.SkyWars?.tourney_sw_insane_doubles_0_kills ?? 0
+                    ) +
+                    Number(
+                        stats?.SkyWars?.tourney_sw_insane_doubles_1_kills ?? 0
+                    ) +
+                    Number(
+                        stats?.SkyWars?.tourney_sw_normal_doubles_0_kills ?? 0
+                    ),
+            },
+            luckyBlockWins: Number(
+                stats?.SkyWars?.lab_win_lucky_blocks_lab ?? 0
+            ),
+        },
+        // skyblock: {
+        //     level: Number(player?.achievements?.skyblock_sb_levels ?? 0),
+        // },
+        smashHeroes: {
+            experience: Object.keys(stats?.SuperSmash ?? {})
+                .filter((x) => x.startsWith("xp_"))
+                .map((x) => Number(stats?.SuperSmash?.[x] ?? 0))
+                .reduce((a, b) => a + b, 0),
+            level: Number(stats?.SuperSmash?.smashLevel ?? 0), // smash_level_total
+            wins: Number(stats?.SuperSmash?.wins ?? 0),
+            kills: Number(stats?.SuperSmash?.kills ?? 0),
+        },
+        speedUHC: {
+            score: Number(stats?.SpeedUHC?.score ?? 0),
+            wins: Number(stats?.SpeedUHC?.wins ?? 0),
+            kills: Number(stats?.SpeedUHC?.kills ?? 0),
+        },
+        turboKartRacers: {
+            trophies:
+                Number(stats?.GingerBread?.bronze_trophy ?? 0) +
+                Number(stats?.GingerBread?.silver_trophy ?? 0) +
+                Number(stats?.GingerBread?.gold_trophy ?? 0),
+            wins: Number(stats?.GingerBread?.gold_trophy ?? 0),
+            tournament: {
+                trophies:
+                    Number(
+                        stats?.GingerBread
+                            ?.tourney_gingerbread_solo_0_bronze_trophy ?? 0
+                    ) +
+                    Number(
+                        stats?.GingerBread
+                            ?.tourney_gingerbread_solo_0_silver_trophy ?? 0
+                    ) +
+                    Number(
+                        stats?.GingerBread
+                            ?.tourney_gingerbread_solo_0_gold_trophy ?? 0
+                    ) +
+                    Number(
+                        stats?.GingerBread
+                            ?.tourney_gingerbread_solo_1_bronze_trophy ?? 0
+                    ) +
+                    Number(
+                        stats?.GingerBread
+                            ?.tourney_gingerbread_solo_1_silver_trophy ?? 0
+                    ) +
+                    Number(
+                        stats?.GingerBread
+                            ?.tourney_gingerbread_solo_1_gold_trophy ?? 0
+                    ),
+                wins:
+                    Number(
+                        stats?.GingerBread
+                            ?.tourney_gingerbread_solo_0_gold_trophy ?? 0
+                    ) +
+                    Number(
+                        stats?.GingerBread
+                            ?.tourney_gingerbread_solo_1_gold_trophy ?? 0
+                    ),
+            },
+        },
+        tntGames: {
+            wins: Number(stats?.TNTGames?.wins ?? 0),
+            kills:
+                Number(stats?.TNTGames?.kills_tntag ?? 0) +
+                Number(stats?.TNTGames?.kills_capture ?? 0) +
+                Number(stats?.TNTGames?.kills_pvprun ?? 0),
+            tournament: {
+                wins:
+                    Number(stats?.TNTGames?.wins_tourney_tnt_run_0 ?? 0) +
+                    Number(stats?.TNTGames?.wins_tourney_tnt_run_1 ?? 0),
+                kills: 0,
+            },
+        },
+        uhc: {
+            score: Number(stats?.UHC?.score ?? 0),
+            wins: Number(stats?.UHC?.wins ?? 0),
+            kills: Number(stats?.UHC?.kills ?? 0),
+        },
+        vampireZ: {
+            wins:
+                Number(stats?.VampireZ?.human_wins ?? 0) +
+                Number(stats?.VampireZ?.vampire_wins ?? 0),
+            kills:
+                Number(stats?.VampireZ?.vampire_kills ?? 0) +
+                Number(stats?.VampireZ?.human_kills ?? 0),
+        },
+        theWalls: {
+            wins: Number(stats?.Walls?.wins ?? 0), // tourney included
+            kills: Number(stats?.Walls?.kills ?? 0),
+        },
+        warlords: {
+            wins: Number(stats?.Battleground?.wins ?? 0),
+            kills: Number(stats?.Battleground?.kills ?? 0),
+        },
+        woolGames: {
+            experience: Number(stats?.WoolGames?.progression?.experience ?? 0),
+            level: getWoolGamesLevel(
+                Number(stats?.WoolGames?.progression?.experience ?? 0)
+            ),
+            wins:
+                Number(stats?.WoolGames?.wool_wars?.stats?.wins ?? 0) +
+                Number(
+                    stats?.WoolGames?.capture_the_wool?.stats
+                        ?.participated_wins ?? 0
+                ) +
+                Number(stats?.WoolGames?.sheep_wars?.stats?.wins ?? 0),
+            kills:
+                Number(stats?.WoolGames?.wool_wars?.stats?.kills ?? 0) +
+                Number(stats?.WoolGames?.capture_the_wool?.stats?.kills ?? 0) +
+                Number(stats?.WoolGames?.sheep_wars?.stats?.kills ?? 0),
+            tournament: {
+                wins:
+                    Number(stats?.WoolGames?.tourney?.wool_wars_0?.wins ?? 0) +
+                    Number(stats?.WoolGames?.tourney?.wool_wars_1?.wins ?? 0),
+                kills:
+                    Number(stats?.WoolGames?.tourney?.wool_wars_0?.kills ?? 0) +
+                    Number(stats?.WoolGames?.tourney?.wool_wars_1?.kills ?? 0),
+            },
+        },
+        skyClash: {
+            wins: Number(stats?.SkyClash?.wins ?? 0),
+            kills: Number(stats?.SkyClash?.kills ?? 0),
+        },
+        crazyWalls: {
+            wins: Number(stats?.TrueCombat?.wins ?? 0),
+            kills: Number(stats?.TrueCombat?.kills ?? 0),
+        },
     };
 
     return {
         uuid: String(player.uuid),
         username: String(player.displayname),
+        prefix: getPlayerPrefix(player),
         playerStats,
         json,
     };
+}
+
+function getPlayerPrefix(player: any) {
+    if (player.prefix) return (player.prefix as string).replace(/§./g, "");
+    if (player.rank === "ADMIN") return "[ADMIN]";
+    if (player.rank === "GAME_MASTER") return "[GM]";
+    if (player.rank === "YOUTUBER") return "[YOUTUBE]";
+    if (player.monthlyPackageRank === "SUPERSTAR") return "[MVP++]";
+    if (player.newPackageRank === "VIP") return "[VIP]";
+    if (player.newPackageRank === "VIP_PLUS") return "[VIP+]";
+    if (player.newPackageRank === "MVP") return "[MVP]";
+    if (player.newPackageRank === "MVP_PLUS") return "[MVP+]";
+    if (player.packageRank === "VIP") return "[VIP]";
+    if (player.packageRank === "VIP_PLUS") return "[VIP+]";
+    if (player.packageRank === "MVP") return "[MVP]";
+    if (player.packageRank === "MVP_PLUS") return "[MVP+]";
+    return "";
 }
 
 // https://hypixel.net/threads/bedwars-level-experience-guide-2023-updated-version.5431988/

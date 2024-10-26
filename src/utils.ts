@@ -14,7 +14,7 @@ export const retryer = async (
         console.error(error);
         if (retryTimes.length > 0) {
             console.error(`Retrying in ${retryTimes[0]} seconds`);
-            await sleep(retryTimes[0]);
+            await sleep(retryTimes[0] * 1000);
             await retryer(func, retryTimes.slice(1));
         } else {
             console.error("Failed job");

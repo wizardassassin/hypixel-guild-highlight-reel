@@ -1,4 +1,4 @@
-import { createGuild, updateGuilds } from "./db-update.js";
+import { createGuild, updateGuild } from "./db-update.js";
 import {
     getGuildEndpointData,
     getPlayerEndpointData,
@@ -15,6 +15,7 @@ import {
 import { GenericCommandModule } from "./types/discord.js";
 import prisma from "./db.js";
 import { retryer } from "./utils.js";
+import { initCron } from "./query-store.js";
 
 const token = process.env.DISCORD_BOT_TOKEN;
 
@@ -75,10 +76,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 });
 
-// "30 0 0 * * *"
 client.once(Events.ClientReady, (readyClient) => {
-    cron.schedule("30 0 0 * * *", () => retryer(updateGuilds), {
-        timezone: "America/New_York",
+    initCron(async (cronType, cronPromise) => {
+        console.log(cronType);
+        console.time("Elapsed");
+        console.log(await cronPromise);
+        console.timeEnd("Elapsed");
     });
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 });
