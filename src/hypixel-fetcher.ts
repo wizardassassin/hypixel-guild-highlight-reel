@@ -42,15 +42,34 @@ export class HypixelFetcher {
                     (timeRemaining / 1000).toFixed(1) +
                     " seconds."
             );
-            await sleep(timeRemaining + 1000); // added one buffer second
+            await sleep(timeRemaining + 2000); // added two buffer seconds
             this.logRemaining = true;
+        }
+    }
+    setRateLimit(res: Response, doLog = false) {
+        const limit = Number(res.headers.get("RateLimit-Limit"));
+        const remaining = Number(res.headers.get("RateLimit-Remaining"));
+        const reset = Number(res.headers.get("RateLimit-Reset"));
+        if (
+            Number.isFinite(limit) &&
+            Number.isFinite(remaining) &&
+            Number.isFinite(reset)
+        ) {
+            if (doLog && this.logRemaining) {
+                console.log("Remaining Requests: " + remaining);
+                this.logRemaining = false;
+            }
+            this.rateLimitLimit = limit;
+            this.rateLimitRemaining = remaining;
+            this.rateLimitReset = reset;
+            this.lastFetch = new Date();
         }
     }
     /**
      * Called one at a time
      *
      */
-    async fetchURL(url: string) {
+    async fetchURL(url: string, depth = 0) {
         const date = new Date();
         await this.#waitReset(date);
         try {
@@ -62,7 +81,18 @@ export class HypixelFetcher {
             if (!res.ok) {
                 console.error("Response Code: " + res.status);
                 const text = await res.text();
-                console.error(this.#parseJson(text, true));
+                const json = this.#parseJson(text, true);
+                if (json) console.error(json);
+                if (json?.throttle && depth < 5) {
+                    this.setRateLimit(res);
+                    console.error("Hit Key Throttle, waiting 5 seconds.", {
+                        limit: this.rateLimitLimit,
+                        remaining: this.rateLimitRemaining,
+                        reset: this.rateLimitReset,
+                    });
+                    await sleep(5000);
+                    return await this.fetchURL(url, depth + 1);
+                }
                 throw new Error("Invalid Response Code: " + res.status);
             }
             const text = await res.text();
@@ -71,23 +101,7 @@ export class HypixelFetcher {
             //     console.error(json);
             //     throw new Error("Unsuccessful Json Response");
             // }
-            const limit = Number(res.headers.get("RateLimit-Limit"));
-            const remaining = Number(res.headers.get("RateLimit-Remaining"));
-            const reset = Number(res.headers.get("RateLimit-Reset"));
-            if (
-                Number.isFinite(limit) &&
-                Number.isFinite(remaining) &&
-                Number.isFinite(reset)
-            ) {
-                if (this.logRemaining) {
-                    console.log("Remaining Requests: " + remaining);
-                    this.logRemaining = false;
-                }
-                this.rateLimitLimit = limit;
-                this.rateLimitRemaining = remaining;
-                this.rateLimitReset = reset;
-                this.lastFetch = new Date();
-            }
+            this.setRateLimit(res, true);
             return json;
         } catch (error) {
             console.error({ url });
