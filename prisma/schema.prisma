@@ -7,14 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model HousingCache {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  cookies   Int
-  player    Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  playerId  String   @unique
-}
-
 model PlayerStats {
   id                 String     @id @default(uuid())
   createdAt          DateTime   @default(now())
@@ -39,7 +31,6 @@ model Player {
   joined        DateTime
   initialJoined DateTime
   PlayerStats   PlayerStats[]
-  HousingCache  HousingCache?
 }
 
 model GuildStats {

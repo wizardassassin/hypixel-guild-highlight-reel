@@ -1,28 +1,29 @@
 import cron from "node-cron";
-import { updateGuild, updateHousingData } from "./db-update.js";
+import { getGuildData, updateGuild } from "./db-update.js";
 import { retryer, sleep } from "./utils.js";
 import prisma from "./db.js";
+import { DateTime } from "luxon";
+import assert from "assert/strict";
 
 async function dailyCron() {
-    await sleep(1000); // One second buffer
+    const dateObj = DateTime.now().setZone("America/New_York");
+    const dateYesterday = dateObj.startOf("day");
+    const dateToday = dateYesterday.plus({ days: 1 });
+    assert.equal(
+        dateToday.toMillis(),
+        dateObj.plus({ minutes: 5 }).startOf("day").toMillis()
+    );
     try {
         const guilds = await prisma.guild.findMany();
-        for (const guild of guilds) {
-            await updateGuild(guild.guildIdHypixel, guild.id);
-        }
-        return true;
-    } catch (error) {
-        console.error(error);
-        return false;
-    }
-}
-
-async function weeklyCron() {
-    try {
-        const guilds = await prisma.guild.findMany();
-        for (const guild of guilds) {
-            await updateHousingData(guild.guildIdHypixel);
-        }
+        await Promise.all(
+            guilds.map(async (guild) => {
+                const guildData = await getGuildData(
+                    guild.guildIdHypixel,
+                    dateToday.toJSDate()
+                );
+                await updateGuild(guild.id, guildData);
+            })
+        );
         return true;
     } catch (error) {
         console.error(error);
@@ -37,23 +38,11 @@ export async function initCron(
     ) => any
 ) {
     cron.schedule(
-        "30 0 0 * * *",
+        "55 23 * * *",
         () =>
             callback(
                 "DAILY",
                 new Promise((res) => dailyCron().then((res2) => res(res2)))
-            ),
-        {
-            timezone: "America/New_York",
-        }
-    );
-
-    cron.schedule(
-        "30 29 9 * * 0",
-        () =>
-            callback(
-                "WEEKLY",
-                new Promise((res) => weeklyCron().then((res2) => res(res2)))
             ),
         {
             timezone: "America/New_York",

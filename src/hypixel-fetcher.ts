@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import { sleep } from "./utils.js";
+import { DateTime } from "luxon";
 // TODO: housing, skyblock
 
 export type PlayerStatsType = PlayerEndpointType["playerStats"];
@@ -116,14 +117,30 @@ export type GuildEndpointType = Awaited<
 
 export async function getGuildEndpointData(
     uuid: string,
-    idType: "PLAYER" | "GUILD" = "PLAYER"
+    idType: "PLAYER" | "GUILD" = "PLAYER",
+    date = DateTime.now().setZone("America/New_York").startOf("day").toJSDate(),
+    depth = 0
 ) {
     const url =
         idType === "PLAYER"
             ? `https://api.hypixel.net/v2/guild?player=${uuid}`
             : `https://api.hypixel.net/v2/guild?id=${uuid}`;
     const json = await HypixelFetcher.instance.fetchURL(url);
-    return parseGuildEndpointData(json);
+    const guild = parseGuildEndpointData(json);
+    const date2 = guild.members[0].expHistory[0][0];
+    const date3 = DateTime.fromJSDate(date)
+        .setZone("America/New_York")
+        .startOf("day");
+    if (date3.toMillis() !== date2.getTime()) {
+        console.error(date3.toJSDate(), date2);
+        if (depth < 5) {
+            console.error("Date mismatch, waiting 5 seconds.");
+            await sleep(5000);
+            return await getGuildEndpointData(uuid, idType, date, depth + 1);
+        }
+        throw new Error("Date mismatch");
+    }
+    return guild;
 }
 
 export function parseGuildEndpointData(json: any) {
@@ -132,7 +149,15 @@ export function parseGuildEndpointData(json: any) {
         uuid: x.uuid as string,
         joined: x.joined as number,
         expHistory: Object.entries(x.expHistory as { [key: string]: number })
-            .map(([key, value]) => [new Date(key), value] as [Date, number])
+            .map(
+                ([key, value]) =>
+                    [
+                        DateTime.fromISO(key, {
+                            zone: "America/New_York",
+                        }).toJSDate(),
+                        value,
+                    ] as [Date, number]
+            )
             .sort((a, b) => b[0].getTime() - a[0].getTime()),
         questParticipation: Number(x.questParticipation ?? 0),
     }));
@@ -146,6 +171,7 @@ export function parseGuildEndpointData(json: any) {
         created: new Date(guild.created),
         exp: guild.exp as number,
         guildExpByGameType,
+        memberUUIDs: members.map((x) => x.uuid),
         members,
         json,
     };

@@ -12,6 +12,7 @@ import {
 } from "./hypixel-fetcher.js";
 import { DateTime } from "luxon";
 import { promisify } from "util";
+import { sleep } from "./utils.js";
 
 export async function createGuild(
     discordGuildID: string,
@@ -44,77 +45,19 @@ export async function getGuildMemberData<T>(
 
 const gzip = promisify(zlib.gzip);
 
-export async function getHousingData(uuid: string) {
-    const guildData = await getGuildEndpointData(uuid, "GUILD");
-    const memberUUIDs = guildData.members.map((x) => x.uuid);
-    const housingData = await getGuildMemberData(
-        memberUUIDs,
-        getHousingEndpointData
-    );
-    return {
-        memberUUIDs,
-        housingData,
-    };
-}
-
 /**
- * Called right before Sunday 9:30AM PST/PDT
+ * Called 5 minutes before 12:00AM PST/PDT
  *
  */
-export async function updateHousingData(
-    uuid: string,
-    dateObj = DateTime.now().setZone("America/New_York"),
-    manualData?: Awaited<ReturnType<typeof getHousingData>>
-) {
-    const date = dateObj.toJSDate();
-    const dateToday = dateObj.startOf("hour").plus({ minutes: 30 }).toJSDate();
-
-    const data = manualData ?? (await getHousingData(uuid));
-
-    const housingCache = await prisma.housingCache.findMany({
-        include: {
-            player: {
-                select: {
-                    uuid: true,
-                },
-            },
-        },
-    });
-    const housingCacheMap = new Map(
-        housingCache.map((x) => [
-            x.player.uuid,
-            { id: x.playerId, cookies: x.cookies },
-        ])
+export async function getGuildData(uuid: string, waitUntil?: Date) {
+    const guildDataOld = await getGuildEndpointData(uuid, "GUILD");
+    const housingData = await getGuildMemberData(
+        guildDataOld.memberUUIDs,
+        getHousingEndpointData
     );
-    const rawData = JSON.stringify({
-        timestamp: date,
-        createdAt: dateToday,
-        housingData: data.housingData.map((x) => x.json),
-    });
-    const hash = crypto.createHash("sha256").update(rawData).digest("hex");
-    const timestamp = date.getTime();
-    await fs.writeFile(`./blob/${timestamp}_${hash}`, await gzip(rawData));
-    await prisma.$transaction(
-        data.housingData
-            .filter((x) => housingCacheMap.get(x.uuid))
-            .map((x) =>
-                prisma.housingCache.update({
-                    where: {
-                        playerId: housingCacheMap.get(x.uuid).id,
-                    },
-                    data: {
-                        createdAt: dateToday,
-                        cookies:
-                            housingCacheMap.get(x.uuid).cookies + x.cookies,
-                    },
-                })
-            )
-    );
-}
-
-export async function getGuildData(uuid: string) {
-    const guildData = await getGuildEndpointData(uuid, "GUILD");
-    const memberUUIDs = guildData.members.map((x) => x.uuid);
+    if (waitUntil) await sleep(waitUntil.getTime() - Date.now());
+    const guildData = await getGuildEndpointData(uuid, "GUILD", waitUntil);
+    const memberUUIDs = guildData.memberUUIDs;
     const playerData = await getGuildMemberData(
         memberUUIDs,
         getPlayerEndpointData
@@ -123,10 +66,7 @@ export async function getGuildData(uuid: string) {
         memberUUIDs,
         getSkyBlockEndpointData
     );
-    const housingData = await getGuildMemberData(
-        memberUUIDs,
-        getHousingEndpointData
-    );
+
     return {
         memberUUIDs,
         guildData,
@@ -141,18 +81,16 @@ export async function getGuildData(uuid: string) {
  *
  */
 export async function updateGuild(
-    uuid: string,
     guildIdInternal: string,
-    dateObj = DateTime.now().setZone("America/New_York"),
-    manualData?: Awaited<ReturnType<typeof getGuildData>>
+    data: Awaited<ReturnType<typeof getGuildData>>,
+    dateObj = DateTime.now().setZone("America/New_York")
 ) {
     const dateNow = dateObj.startOf("day");
-    const dateMonday = dateObj.startOf("week");
+    // dateSunday just works
+    const dateSunday = dateObj.startOf("week").minus({ days: 1 }).toJSDate();
     const date = dateObj.toJSDate();
     const dateToday = dateNow.toJSDate();
     const dateYesterday = dateNow.minus({ days: 1 }).toJSDate();
-
-    const data = manualData ?? (await getGuildData(uuid));
 
     const memberMap = new Map(data.guildData.members.map((x) => [x.uuid, x]));
     const housingMap = new Map(data.housingData.map((x) => [x.uuid, x]));
@@ -174,12 +112,6 @@ export async function updateGuild(
                     prefix: playerMap.get(uuid).prefix,
                     initialJoined: new Date(memberMap.get(uuid).joined),
                     joined: new Date(memberMap.get(uuid).joined),
-                    HousingCache: {
-                        create: {
-                            createdAt: dateToday,
-                            cookies: 0,
-                        },
-                    },
                 },
                 update: {
                     username: playerMap.get(uuid).username,
@@ -204,19 +136,45 @@ export async function updateGuild(
                         },
                         take: 1,
                     },
-                    HousingCache: {
-                        select: {
-                            cookies: true,
-                        },
-                    },
                 },
             })
         )
     );
-    for (const { id, uuid, PlayerStats, HousingCache } of playerDataInternal) {
+    const cookieDataInternal = await prisma.player.findMany({
+        where: {
+            OR: data.memberUUIDs.map((x) => ({ uuid: x })),
+        },
+        select: {
+            uuid: true,
+            PlayerStats: {
+                where: {
+                    createdAt: {
+                        lte: dateSunday,
+                    },
+                    GuildStats: {
+                        guildId: guildIdInternal,
+                    },
+                },
+                select: {
+                    housingCookies: true,
+                },
+                orderBy: {
+                    createdAt: "desc",
+                },
+                take: 1,
+            },
+        },
+    });
+    const cookieDataInternalMap = new Map(
+        cookieDataInternal.map((x) => [
+            x.uuid,
+            x.PlayerStats?.[0]?.housingCookies ?? 0,
+        ])
+    );
+    for (const { id, uuid, PlayerStats } of playerDataInternal) {
         playerIdInternalMap.set(uuid, id);
         prevGuildExpMap.set(uuid, PlayerStats?.[0]?.experience ?? 0);
-        prevHousingMap.set(uuid, HousingCache?.cookies ?? 0);
+        prevHousingMap.set(uuid, cookieDataInternalMap.get(uuid) ?? 0);
     }
     await prisma.guild.update({
         where: {
@@ -243,7 +201,8 @@ export async function updateGuild(
         experience: memberMap.get(x).expHistory[1][1] + prevGuildExpMap.get(x),
         questParticipation: memberMap.get(x).questParticipation,
         skyblockExperience: skyblockMap.get(x).experience,
-        housingCookies: housingMap.get(x).cookies + prevHousingMap.get(x),
+        housingCookies:
+            (housingMap.get(x)?.cookies ?? 0) + prevHousingMap.get(x),
         playerStats: {
             ...playerMap.get(x).playerStats,
         } as PlayerStatsType,
