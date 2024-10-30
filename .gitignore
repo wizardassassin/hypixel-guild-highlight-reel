@@ -138,3 +138,6 @@ sqlite.db-journal
 
 # Blob Files
 blob/
+
+# Test Files
+test[._-]*
