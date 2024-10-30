@@ -9,14 +9,14 @@ export async function onCron(
     cronType: string,
     cronPromise: Promise<boolean>
 ) {
-    const message = await client.instanceChannel.send("Fetching data...");
+    console.log("Fetching Data");
     console.time("Elapsed");
     const didSucceed = await cronPromise;
     console.timeEnd("Elapsed");
     console.log("Fetch Succeeded:", didSucceed);
-    await message.edit(
-        "Fetching data..." + (didSucceed ? "Success!" : "Failed.")
-    );
+    if (!didSucceed) {
+        await client.instanceChannel.send("⚠️ ⚠️ Fetching Data Failed ⚠️ ⚠️");
+    }
     if (didSucceed) {
         const dateObj = DateTime.now().setZone("America/New_York");
         const dateToday = dateObj.startOf("day");
