@@ -7,7 +7,6 @@ import {
 } from "discord.js";
 import { DateTime } from "luxon";
 import { diffPlayerStats, queryGuildData } from "../db-query.js";
-import { getAvatar } from "../skin-fetcher.js";
 import { createGuildRecap, createStatsEmbed } from "../recap-format.js";
 
 export const data = new SlashCommandBuilder()

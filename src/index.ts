@@ -15,7 +15,6 @@ import {
 } from "discord.js";
 import { GenericCommandModule } from "./types/discord.js";
 import prisma from "./db.js";
-import { retryer } from "./utils.js";
 import { initCron } from "./query-store.js";
 import { onCron } from "./query-informer.js";
 

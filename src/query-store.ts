@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import { getGuildData, updateGuild } from "./db-update.js";
-import { retryer, sleep } from "./utils.js";
+import { sleep } from "./utils.js";
 import prisma from "./db.js";
 import { DateTime } from "luxon";
 import assert from "assert/strict";

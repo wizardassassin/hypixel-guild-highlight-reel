@@ -5,11 +5,11 @@ import {
     InteractionContextType,
     SlashCommandBuilder,
 } from "discord.js";
-import { fetchProfile, fetchUUID, getAvatar } from "../skin-fetcher.js";
 import { PlayerEndpointType } from "../hypixel-fetcher.js";
 import { DateTime } from "luxon";
 import { diffPlayerStats, queryPlayerData } from "../db-query.js";
 import { createStatsEmbed } from "../recap-format.js";
+import { MojangFetcher } from "../skin-fetcher.js";
 
 export const data = new SlashCommandBuilder()
     .setName("getstats")
@@ -51,7 +51,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const dateYesterday = startParsed2;
     const dateToday = endParsed2;
     const username = interaction.options.getString("username", true);
-    const { id: uuid, name: username2 } = await fetchProfile(username);
+    const { uuid, username: username2 } =
+        await MojangFetcher.instance.getProfile(username);
     if (!uuid) {
         await interaction.reply(`${username} was not found.`);
         return;

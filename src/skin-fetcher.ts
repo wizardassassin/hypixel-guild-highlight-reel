@@ -4,6 +4,8 @@ import {
     createCanvas,
     loadImage,
 } from "canvas";
+import { ExpiringCache } from "./expiring-cache.js";
+import { simpleRetryer } from "./utils.js";
 
 /**
  *
@@ -34,12 +36,12 @@ const fetchBlob = async (url: string): Promise<Blob> => {
     return blob;
 };
 
-export const fetchProfile = (username: string) =>
+const fetchProfile = (username: string) =>
     fetchJson(
         `https://api.mojang.com/users/profiles/minecraft/${username}`
-    ).catch((err) => ({})) as Promise<{ id: string; name: string }>;
+    ) as Promise<{ id: string; name: string }>;
 
-export const fetchUUID = (username: string) =>
+const fetchUUID = (username: string) =>
     fetchJson(
         `https://api.mojang.com/users/profiles/minecraft/${username}`
     ).then((json) => json.id as string);
@@ -131,11 +133,7 @@ const getHead = (skin: Canvas, size = 24) => {
     return canvas.toBuffer();
 };
 
-export const getAvatar = async (
-    username: string,
-    size = 24,
-    isUUID = false
-) => {
+const getAvatar = async (username: string, size = 24, isUUID = false) => {
     try {
         const uuid = isUUID ? username : await fetchUUID(username);
         const url = await fetchSkinURL(uuid);
@@ -149,3 +147,45 @@ export const getAvatar = async (
         throw error;
     }
 };
+
+const getSkinBlob = async (uuid: string) => {
+    const url = await fetchSkinURL(uuid);
+    const url2 = new URL(url);
+    url2.protocol = "https:";
+    const skinBlob = await fetchBlob(url2.href);
+    return skinBlob;
+};
+
+const getProfile = async (username: string) => {
+    const json = await fetchProfile(username);
+    return { uuid: json.id, username: json.name };
+};
+
+export class MojangFetcher {
+    static #instance: MojangFetcher;
+
+    #uuidCache: ExpiringCache<string, { uuid: string; username: string }>;
+    #skinCache: ExpiringCache<string, Blob>;
+    constructor() {
+        this.#uuidCache = new ExpiringCache(1000 * 60 * 10);
+        this.#skinCache = new ExpiringCache(1000 * 60 * 5);
+    }
+    static get instance() {
+        if (!this.#instance) return (this.#instance = new MojangFetcher());
+        return this.#instance;
+    }
+    async getProfile(username: string) {
+        username = username.toLowerCase();
+        const profile = await this.#uuidCache.getOrFetch(username, () =>
+            simpleRetryer(() => getProfile(username))
+        );
+        return profile;
+    }
+    async getAvatar(uuid: string, size = 24) {
+        const skinBlob = await this.#skinCache.getOrFetch(uuid, () =>
+            simpleRetryer(() => getSkinBlob(uuid))
+        );
+        const parsedSkin = await getParsedSkin(skinBlob);
+        return getHead(parsedSkin, size);
+    }
+}

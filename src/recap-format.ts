@@ -5,8 +5,8 @@ import {
     Message,
 } from "discord.js";
 import { diffPlayerStats, queryGuildData } from "./db-query.js";
-import { getAvatar } from "./skin-fetcher.js";
 import { DateTime } from "luxon";
+import { MojangFetcher } from "./skin-fetcher.js";
 
 type statsEmbedDataType = {
     username: string;
@@ -54,9 +54,12 @@ export async function createStatsEmbed(data: statsEmbedDataType) {
     const message: BaseMessageOptions = {
         embeds: embeds,
         files: [
-            new AttachmentBuilder(await getAvatar(data.uuid, 128, true), {
-                name: "avatar.png",
-            }),
+            new AttachmentBuilder(
+                await MojangFetcher.instance.getAvatar(data.uuid, 128),
+                {
+                    name: "avatar.png",
+                }
+            ),
         ],
     };
     return message;
