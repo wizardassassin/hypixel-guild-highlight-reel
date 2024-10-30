@@ -23,7 +23,6 @@ export async function createGuild(
     const guild = await prisma.guild.create({
         data: {
             guildIdDiscord: discordGuildID,
-            channelIdDiscord: discordChannelID,
             guildIdHypixel: guildData.id,
             name: guildData.name,
             createdAtHypixel: guildData.created,

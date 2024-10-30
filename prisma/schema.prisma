@@ -49,7 +49,6 @@ model GuildStats {
 model Guild {
   id               String       @id @default(uuid())
   guildIdDiscord   String       @unique
-  channelIdDiscord String       @unique
   guildIdHypixel   String       @unique
   name             String
   createdAtHypixel DateTime

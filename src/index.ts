@@ -77,12 +77,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
 });
 
 client.once(Events.ClientReady, (readyClient) => {
-    initCron(async (cronType, cronPromise) => {
-        console.log(cronType);
-        console.time("Elapsed");
-        console.log(await cronPromise);
-        console.timeEnd("Elapsed");
-    });
+    const channel = readyClient.channels.cache.get(channelId);
+    if (channel instanceof TextChannel) {
+        readyClient.instanceChannel = channel;
+    } else {
+        console.error("Invalid Channel ID");
+    }
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 });
 
