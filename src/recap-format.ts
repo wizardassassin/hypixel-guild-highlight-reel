@@ -30,7 +30,9 @@ export async function createStatsEmbed(data: statsEmbedDataType) {
         .setTitle(data.username)
         .setThumbnail("attachment://avatar.png");
     embeds.push(mainEmbed);
-    if (entries.length <= 20) {
+    if (entries.length === 0) {
+        mainEmbed.setDescription("No measurable stats were found.");
+    } else if (entries.length <= 20) {
         mainEmbed.addFields(...entries);
     } else if (entries.length <= 45) {
         mainEmbed.addFields(...entries.slice(0, entries.length / 2));

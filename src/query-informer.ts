@@ -15,7 +15,7 @@ export async function onCron(
     console.timeEnd("Elapsed");
     console.log("Fetch Succeeded:", didSucceed);
     await message.edit(
-        "Fetching data..." + (didSucceed ? "Success" : "Failed")
+        "Fetching data..." + (didSucceed ? "Success!" : "Failed.")
     );
     if (didSucceed) {
         const dateObj = DateTime.now().setZone("America/New_York");
