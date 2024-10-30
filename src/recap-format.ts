@@ -25,25 +25,32 @@ export async function createStatsEmbed(data: statsEmbedDataType) {
         name: name,
         value: numberFormat2.format(value),
     }));
-
+    const embeds = [];
+    const mainEmbed = new EmbedBuilder()
+        .setTitle(data.username)
+        .setThumbnail("attachment://avatar.png");
+    embeds.push(mainEmbed);
+    if (entries.length <= 20) {
+        mainEmbed.addFields(...entries);
+    } else if (entries.length <= 45) {
+        mainEmbed.addFields(...entries.slice(0, entries.length / 2));
+        embeds.push(
+            new EmbedBuilder().addFields(...entries.slice(entries.length / 2))
+        );
+    } else {
+        const chunkSize = entries.length / 3;
+        mainEmbed.addFields(...entries.slice(0, chunkSize));
+        embeds.push(
+            new EmbedBuilder().addFields(
+                ...entries.slice(chunkSize, chunkSize * 2)
+            )
+        );
+        embeds.push(
+            new EmbedBuilder().addFields(...entries.slice(chunkSize * 2))
+        );
+    }
     const message: BaseMessageOptions = {
-        embeds:
-            entries.length < 16
-                ? [
-                      new EmbedBuilder()
-                          .setTitle(data.username)
-                          .addFields(...entries)
-                          .setThumbnail("attachment://avatar.png"),
-                  ]
-                : [
-                      new EmbedBuilder()
-                          .setTitle(data.username)
-                          .addFields(...entries.slice(0, entries.length / 2))
-                          .setThumbnail("attachment://avatar.png"),
-                      new EmbedBuilder().addFields(
-                          ...entries.slice(entries.length / 2)
-                      ),
-                  ],
+        embeds: embeds,
         files: [
             new AttachmentBuilder(await getAvatar(data.uuid, 128, true), {
                 name: "avatar.png",
