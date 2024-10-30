@@ -47,7 +47,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         interaction.guildId,
         dateYesterday,
         dateToday,
-        "Daily Guild Recap",
+        "Custom Guild Recap",
         (content) =>
             interaction.reply({
                 content: content,
