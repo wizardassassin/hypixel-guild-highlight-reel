@@ -34,6 +34,11 @@ const fetchBlob = async (url: string): Promise<Blob> => {
     return blob;
 };
 
+export const fetchProfile = (username: string) =>
+    fetchJson(
+        `https://api.mojang.com/users/profiles/minecraft/${username}`
+    ).catch((err) => ({})) as Promise<{ id: string; name: string }>;
+
 export const fetchUUID = (username: string) =>
     fetchJson(
         `https://api.mojang.com/users/profiles/minecraft/${username}`
