@@ -11,13 +11,16 @@ import {
     Collection,
     Events,
     IntentsBitField,
+    TextChannel,
 } from "discord.js";
 import { GenericCommandModule } from "./types/discord.js";
 import prisma from "./db.js";
 import { retryer } from "./utils.js";
 import { initCron } from "./query-store.js";
+import { onCron } from "./query-informer.js";
 
 const token = process.env.DISCORD_BOT_TOKEN;
+const channelId = process.env.DISCORD_CHANNEL_ID;
 
 const client = new Client({
     intents: [
@@ -83,6 +86,9 @@ client.once(Events.ClientReady, (readyClient) => {
     } else {
         console.error("Invalid Channel ID");
     }
+    initCron((cronType, cronPromise) =>
+        onCron(readyClient, cronType, cronPromise)
+    );
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 });
 

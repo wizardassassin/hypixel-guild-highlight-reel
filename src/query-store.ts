@@ -31,7 +31,7 @@ async function dailyCron() {
     }
 }
 
-export async function initCron(
+export function initCron(
     callback: (
         cronType: "DAILY" | "WEEKLY",
         cronPromise: Promise<boolean>

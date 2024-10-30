@@ -21,6 +21,7 @@ interface GenericCommandModule {
 declare module "discord.js" {
     export interface Client {
         commands: Collection<string, GenericCommandModule>;
+        instanceChannel: TextChannel;
         db: PrismaClient;
     }
 }
