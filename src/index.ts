@@ -85,6 +85,7 @@ client.once(Events.ClientReady, (readyClient) => {
     } else {
         console.error("Invalid Channel ID");
     }
+    readyClient.cronIsRunning = false;
     initCron((cronType, cronPromise) =>
         onCron(readyClient, cronType, cronPromise)
     );

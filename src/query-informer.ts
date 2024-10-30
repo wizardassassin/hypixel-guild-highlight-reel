@@ -10,9 +10,11 @@ export async function onCron(
     cronPromise: Promise<boolean>
 ) {
     console.log("Fetching Data");
+    client.cronIsRunning = true;
     console.time("Elapsed");
     const didSucceed = await cronPromise;
     console.timeEnd("Elapsed");
+    client.cronIsRunning = false;
     console.log("Fetch Succeeded:", didSucceed);
     if (!didSucceed) {
         await client.instanceChannel.send("⚠️ ⚠️ Fetching Data Failed ⚠️ ⚠️");
