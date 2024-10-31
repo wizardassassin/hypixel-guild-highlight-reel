@@ -28,7 +28,8 @@ export async function onCron(
                 dateToday.minus({ weeks: 1 }),
                 dateToday,
                 "Weekly Guild Highlight",
-                (content) => client.instanceChannel.send(content)
+                (content) => client.instanceChannel.send(content),
+                true
             );
         }
         if (isStartOfMonth(dateObj)) {
@@ -37,7 +38,8 @@ export async function onCron(
                 dateToday.minus({ months: 1 }),
                 dateToday,
                 "Monthly Guild Recap",
-                (content) => client.instanceChannel.send(content)
+                (content) => client.instanceChannel.send(content),
+                true
             );
         }
         if (isStartOfYear(dateObj)) {
@@ -46,7 +48,8 @@ export async function onCron(
                 dateToday.minus({ years: 1 }),
                 dateToday,
                 "Yearly Guild Retrospective",
-                (content) => client.instanceChannel.send(content)
+                (content) => client.instanceChannel.send(content),
+                true
             );
         }
     }

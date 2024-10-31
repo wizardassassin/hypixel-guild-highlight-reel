@@ -2,6 +2,66 @@ import { Prisma } from "@prisma/client";
 import prisma from "./db.js";
 import { PlayerEndpointType, PlayerStatsType } from "./hypixel-fetcher.js";
 
+export async function queryGuildDataLoose(
+    guildId: string,
+    startDate: Date,
+    stopDate: Date
+) {
+    const data1 = await prisma.guild.findUnique({
+        where: {
+            guildIdDiscord: guildId,
+        },
+        include: {
+            GuildStats: {
+                where: {
+                    createdAt: {
+                        gte: startDate,
+                    },
+                },
+                orderBy: {
+                    createdAt: "asc",
+                },
+                include: {
+                    members: {
+                        include: {
+                            player: true,
+                        },
+                    },
+                },
+                take: 1,
+            },
+        },
+    });
+    const data2 = await prisma.guild.findUnique({
+        where: {
+            guildIdDiscord: guildId,
+        },
+        select: {
+            GuildStats: {
+                where: {
+                    createdAt: {
+                        lte: stopDate,
+                    },
+                },
+                orderBy: {
+                    createdAt: "desc",
+                },
+                include: {
+                    members: {
+                        include: {
+                            player: true,
+                        },
+                    },
+                },
+                take: 1,
+            },
+        },
+    });
+    if (data2?.GuildStats?.length >= 1)
+        data1.GuildStats.push(data2.GuildStats[0]);
+    return data1;
+}
+
 export async function queryGuildData(
     guildId: string,
     startDate: Date,

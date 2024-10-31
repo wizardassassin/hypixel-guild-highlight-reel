@@ -4,7 +4,11 @@ import {
     EmbedBuilder,
     Message,
 } from "discord.js";
-import { diffPlayerStats, queryGuildData } from "./db-query.js";
+import {
+    diffPlayerStats,
+    queryGuildData,
+    queryGuildDataLoose,
+} from "./db-query.js";
 import { DateTime } from "luxon";
 import { MojangFetcher } from "./skin-fetcher.js";
 
@@ -70,21 +74,41 @@ export async function createGuildRecap(
     dateYesterday: DateTime<true> | DateTime<false>,
     dateToday: DateTime<true> | DateTime<false>,
     recapName: string,
-    sendMessage: (content: string) => Promise<Message<boolean>>
+    sendMessage: (content: string) => Promise<Message<boolean>>,
+    looseFallback = false
 ) {
     const dYest = dateYesterday.toFormat("MM/dd/yy");
     const dToday = dateToday.toFormat("MM/dd/yy");
-    const data = await queryGuildData(
+    let data_1 = await queryGuildData(
         guildId,
         dateYesterday.toJSDate(),
         dateToday.toJSDate()
     );
+    if (data_1.GuildStats.length !== 2 && looseFallback) {
+        data_1 = await queryGuildDataLoose(
+            guildId,
+            dateYesterday.toJSDate(),
+            dateToday.toJSDate()
+        );
+        if (data_1.GuildStats.length === 2) {
+            recapName = "\\(Semi\\) " + recapName;
+            dateYesterday = DateTime.fromJSDate(
+                data_1.GuildStats[0].createdAt,
+                { zone: "America/New_York" }
+            );
+            dateToday = DateTime.fromJSDate(data_1.GuildStats[1].createdAt, {
+                zone: "America/New_York",
+            });
+        }
+    }
+    const data = data_1;
     if (data.GuildStats.length !== 2) {
         await sendMessage(
             `No data could be found in the range ${dYest} - ${dToday}`
         );
         return;
     }
+
     const guildData = data.GuildStats[1].members
         .filter(
             (x) =>
@@ -145,7 +169,7 @@ export async function createGuildRecap(
 
     const reply = await sendMessage(content);
     const thread = await reply.startThread({
-        name: recapName,
+        name: recapName.replace(/\\/g, ""),
     });
     for (const playerData of guildData) {
         await thread.send(await createStatsEmbed(playerData));
