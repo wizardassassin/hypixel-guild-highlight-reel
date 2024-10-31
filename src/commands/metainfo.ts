@@ -35,6 +35,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         dateToday.toJSDate(),
         data2
     );
+    const lastFetch = Math.floor(dateToday.toMillis() / 1000);
     const nextFetch = Math.floor(dateToday.plus({ days: 1 }).toMillis() / 1000);
     const embed = new EmbedBuilder().setTitle("Guild Stats Metadata").addFields(
         {
@@ -44,11 +45,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         {
             name: "Last Data Fetch",
             value:
-                lastDate.getTime() === dateToday.toMillis()
+                `<t:${lastFetch}:R> - ` +
+                (lastDate.getTime() === dateToday.toMillis()
                     ? "Success!"
                     : interaction.client.cronIsRunning
                     ? "In progress."
-                    : "Failed. ⚠️",
+                    : "Failed. ⚠️"),
         },
         { name: "Next Data Fetch", value: `<t:${nextFetch}:R>` },
         { name: "Missing Dates", value: missingDates }
