@@ -25,7 +25,6 @@ const client = new Client({
     intents: [
         IntentsBitField.Flags.Guilds,
         IntentsBitField.Flags.GuildMessages,
-        IntentsBitField.Flags.MessageContent,
     ],
     presence: {
         activities: [{ name: "Minecraft", type: ActivityType.Playing }],
