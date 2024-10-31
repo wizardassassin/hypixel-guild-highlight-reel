@@ -14,9 +14,11 @@ import {
 import { getGuildData, updateGuild } from "./db-update.js";
 import { sleep } from "./utils.js";
 
+const guildId = process.env.DISCORD_GUILD_ID;
+
 const guild = await prisma.guild.findUnique({
     where: {
-        guildIdDiscord: "***REMOVED***",
+        guildIdDiscord: guildId,
     },
 });
 async function seedFile(filename: string) {
