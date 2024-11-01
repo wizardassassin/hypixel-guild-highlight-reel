@@ -77,8 +77,6 @@ export async function createGuildRecap(
     sendMessage: (content: string) => Promise<Message<boolean>>,
     looseFallback = false
 ) {
-    const dYest = dateYesterday.toFormat("MM/dd/yy");
-    const dToday = dateToday.toFormat("MM/dd/yy");
     let data_1 = await queryGuildData(
         guildId,
         dateYesterday.toJSDate(),
@@ -102,6 +100,8 @@ export async function createGuildRecap(
         }
     }
     const data = data_1;
+    const dYest = dateYesterday.toFormat("MM/dd/yy");
+    const dToday = dateToday.toFormat("MM/dd/yy");
     if (data.GuildStats.length !== 2) {
         await sendMessage(
             `No data could be found in the range ${dYest} - ${dToday}`
