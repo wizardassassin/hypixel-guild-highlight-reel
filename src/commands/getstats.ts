@@ -7,7 +7,11 @@ import {
 } from "discord.js";
 import { PlayerEndpointType } from "../hypixel-fetcher.js";
 import { DateTime } from "luxon";
-import { diffPlayerStats, queryPlayerData } from "../db-query.js";
+import {
+    diffPlayerStats,
+    queryPlayerData,
+    queryPlayerDataLoose,
+} from "../db-query.js";
 import { createStatsEmbed } from "../recap-format.js";
 import { MojangFetcher } from "../skin-fetcher.js";
 
@@ -57,7 +61,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         await interaction.reply(`${username} was not found.`);
         return;
     }
-    const data = await queryPlayerData(
+    const data = await queryPlayerDataLoose(
         uuid,
         dateYesterday.toJSDate(),
         dateToday.toJSDate()
