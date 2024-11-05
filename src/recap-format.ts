@@ -17,6 +17,8 @@ type statsEmbedDataType = {
     uuid: string;
     prefix: string;
     diff: ReturnType<typeof diffPlayerStats>;
+    startDate: Date;
+    stopDate: Date;
 };
 
 const numberFormat2 = new Intl.NumberFormat("en-US", {
@@ -55,6 +57,17 @@ export async function createStatsEmbed(data: statsEmbedDataType) {
             new EmbedBuilder().addFields(...entries.slice(chunkSize * 2))
         );
     }
+    if (data.startDate && data.stopDate) {
+        const dStart = DateTime.fromJSDate(data.startDate, {
+            zone: "America/New_York",
+        }).toFormat("MM/dd/yy");
+        const dStop = DateTime.fromJSDate(data.stopDate, {
+            zone: "America/New_York",
+        }).toFormat("MM/dd/yy");
+        embeds.at(-1).setFooter({
+            text: `${dStart} - ${dStop}`,
+        });
+    }
     const message: BaseMessageOptions = {
         embeds: embeds,
         files: [
@@ -74,58 +87,42 @@ export async function createGuildRecap(
     dateYesterday: DateTime<true> | DateTime<false>,
     dateToday: DateTime<true> | DateTime<false>,
     recapName: string,
-    sendMessage: (content: string) => Promise<Message<boolean>>,
-    looseFallback = false
+    sendMessage: (content: string) => Promise<Message<boolean>>
 ) {
-    let data_1 = await queryGuildData(
+    let data = await queryGuildDataLoose(
         guildId,
         dateYesterday.toJSDate(),
         dateToday.toJSDate()
     );
-    if (data_1.GuildStats.length !== 2 && looseFallback) {
-        data_1 = await queryGuildDataLoose(
-            guildId,
-            dateYesterday.toJSDate(),
-            dateToday.toJSDate()
-        );
-        if (data_1.GuildStats.length === 2) {
-            recapName = "\\(Semi\\) " + recapName;
-            dateYesterday = DateTime.fromJSDate(
-                data_1.GuildStats[0].createdAt,
-                { zone: "America/New_York" }
-            );
-            dateToday = DateTime.fromJSDate(data_1.GuildStats[1].createdAt, {
-                zone: "America/New_York",
-            });
-        }
-    }
-    const data = data_1;
-    const dYest = dateYesterday.toFormat("MM/dd/yy");
-    const dToday = dateToday.toFormat("MM/dd/yy");
-    if (data.GuildStats.length !== 2) {
+
+    if (
+        data.guild.GuildStats.length !== 2 ||
+        data.guild.GuildStats[0].id === data.guild.GuildStats[1].id
+    ) {
+        const dYest = dateYesterday.toFormat("MM/dd/yy");
+        const dToday = dateToday.toFormat("MM/dd/yy");
         await sendMessage(
             `No data could be found in the range ${dYest} - ${dToday}`
         );
         return;
     }
-
-    const guildData = data.GuildStats[1].members
-        .filter(
-            (x) =>
-                data.GuildStats[0].members.findIndex(
-                    (x2) => x2.playerId === x.playerId
-                ) !== -1
-        )
+    dateYesterday = DateTime.fromJSDate(data.guild.GuildStats[0].createdAt, {
+        zone: "America/New_York",
+    });
+    dateToday = DateTime.fromJSDate(data.guild.GuildStats[1].createdAt, {
+        zone: "America/New_York",
+    });
+    const dYest = dateYesterday.toFormat("MM/dd/yy");
+    const dToday = dateToday.toFormat("MM/dd/yy");
+    const guildData = data.players
+        .filter((x) => x.PlayerStats.length >= 2)
         .map((x) => ({
-            username: x.player.username,
-            uuid: x.player.uuid,
-            prefix: x.player.prefix,
-            diff: diffPlayerStats(
-                data.GuildStats[0].members.find(
-                    (x2) => x2.playerId === x.playerId
-                ),
-                x
-            ),
+            username: x.username,
+            uuid: x.uuid,
+            prefix: x.prefix,
+            diff: diffPlayerStats(x.PlayerStats[0], x.PlayerStats[1]),
+            startDate: x.PlayerStats[0].createdAt,
+            stopDate: x.PlayerStats[1].createdAt,
         }))
         .filter((x) => x.diff.length !== 0)
         .sort(
@@ -135,7 +132,8 @@ export async function createGuildRecap(
                 (a.diff.find((x) => x.name === "Guild Experience")?.value ?? 0)
         );
     const totalExp =
-        data.GuildStats[1].experience - data.GuildStats[0].experience;
+        data.guild.GuildStats[1].experience -
+        data.guild.GuildStats[0].experience;
     const totalKills = guildData
         .map((x) =>
             x.diff

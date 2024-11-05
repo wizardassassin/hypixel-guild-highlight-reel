@@ -7,59 +7,89 @@ export async function queryGuildDataLoose(
     startDate: Date,
     stopDate: Date
 ) {
-    const data1 = await prisma.guild.findUnique({
-        where: {
-            guildIdDiscord: guildId,
-        },
-        include: {
-            GuildStats: {
+    const [guildStart, guildStop, playersStart, playersStop] =
+        await prisma.$transaction([
+            prisma.guild.findUnique({
                 where: {
-                    createdAt: {
-                        gte: startDate,
-                    },
-                },
-                orderBy: {
-                    createdAt: "asc",
+                    guildIdDiscord: guildId,
                 },
                 include: {
-                    members: {
-                        include: {
-                            player: true,
+                    GuildStats: {
+                        where: {
+                            createdAt: {
+                                gte: startDate,
+                            },
                         },
+                        orderBy: {
+                            createdAt: "asc",
+                        },
+                        take: 1,
                     },
                 },
-                take: 1,
-            },
-        },
-    });
-    const data2 = await prisma.guild.findUnique({
-        where: {
-            guildIdDiscord: guildId,
-        },
-        select: {
-            GuildStats: {
+            }),
+            prisma.guild.findUnique({
                 where: {
-                    createdAt: {
-                        lte: stopDate,
-                    },
+                    guildIdDiscord: guildId,
                 },
-                orderBy: {
-                    createdAt: "desc",
-                },
-                include: {
-                    members: {
-                        include: {
-                            player: true,
+                select: {
+                    GuildStats: {
+                        where: {
+                            createdAt: {
+                                lte: stopDate,
+                            },
                         },
+                        orderBy: {
+                            createdAt: "desc",
+                        },
+                        take: 1,
                     },
                 },
-                take: 1,
-            },
-        },
-    });
-    if (data2?.GuildStats?.length >= 1)
-        data1.GuildStats.push(data2.GuildStats[0]);
-    return data1;
+            }),
+            prisma.player.findMany({
+                include: {
+                    PlayerStats: {
+                        where: {
+                            createdAt: {
+                                gte: startDate,
+                            },
+                        },
+                        orderBy: {
+                            createdAt: "asc",
+                        },
+                        take: 1,
+                    },
+                },
+            }),
+            prisma.player.findMany({
+                select: {
+                    id: true,
+                    PlayerStats: {
+                        where: {
+                            createdAt: {
+                                lte: stopDate,
+                            },
+                        },
+                        orderBy: {
+                            createdAt: "desc",
+                        },
+                        take: 1,
+                    },
+                },
+            }),
+        ]);
+    if (guildStop?.GuildStats?.length >= 1) {
+        guildStart.GuildStats.push(guildStop.GuildStats[0]);
+    }
+    for (const playerStart of playersStart) {
+        const playerStop = playersStop.find((x) => x.id === playerStart.id);
+        if (playerStop?.PlayerStats?.length >= 1) {
+            playerStart.PlayerStats.push(playerStop.PlayerStats[0]);
+        }
+    }
+    return {
+        guild: guildStart,
+        players: playersStart,
+    };
 }
 
 export async function queryGuildData(
@@ -127,6 +157,56 @@ export async function queryGuildDataOnly(
         },
     });
     return data1;
+}
+
+export async function queryPlayerDataLoose(
+    uuid: string,
+    startDate: Date,
+    stopDate: Date
+) {
+    const [playerStart, playerStop] = await prisma.$transaction([
+        prisma.player.findUnique({
+            where: {
+                uuid: uuid,
+            },
+            include: {
+                PlayerStats: {
+                    where: {
+                        createdAt: {
+                            gte: startDate,
+                        },
+                    },
+                    orderBy: {
+                        createdAt: "asc",
+                    },
+                    take: 1,
+                },
+            },
+        }),
+        prisma.player.findUnique({
+            where: {
+                uuid: uuid,
+            },
+            select: {
+                id: true,
+                PlayerStats: {
+                    where: {
+                        createdAt: {
+                            lte: stopDate,
+                        },
+                    },
+                    orderBy: {
+                        createdAt: "desc",
+                    },
+                    take: 1,
+                },
+            },
+        }),
+    ]);
+    if (playerStop?.PlayerStats?.length >= 1) {
+        playerStart.PlayerStats.push(playerStop.PlayerStats[0]);
+    }
+    return playerStart;
 }
 
 export async function queryPlayerData(

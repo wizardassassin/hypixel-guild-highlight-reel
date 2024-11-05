@@ -32,10 +32,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const dateObj = DateTime.now().setZone("America/New_York");
     const start = interaction.options.getString("start") ?? "";
     const end = interaction.options.getString("end") ?? "";
-    const startParsed = DateTime.fromFormat(start, "MM/dd/yy", {
+    const startParsed = DateTime.fromFormat(start, "M/d/yy", {
         zone: "America/New_York",
     });
-    const endParsed = DateTime.fromFormat(end, "MM/dd/yy", {
+    const endParsed = DateTime.fromFormat(end, "M/d/yy", {
         zone: "America/New_York",
     });
     const startParsed2 = startParsed.isValid
@@ -79,9 +79,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         uuid: data.uuid,
         prefix: data.prefix,
         diff: playerData,
-    });
-    (message.embeds.at(-1) as EmbedBuilder).setFooter({
-        text: `${dYest} - ${dToday}`,
+        startDate: data.PlayerStats[0].createdAt,
+        stopDate: data.PlayerStats[1].createdAt,
     });
     await interaction.reply(message);
 }
