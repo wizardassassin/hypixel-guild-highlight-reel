@@ -2,6 +2,7 @@ import {
     AttachmentBuilder,
     BaseMessageOptions,
     EmbedBuilder,
+    escapeMarkdown,
     Message,
 } from "discord.js";
 import {
@@ -33,7 +34,7 @@ export async function createStatsEmbed(data: statsEmbedDataType) {
     }));
     const embeds = [];
     const mainEmbed = new EmbedBuilder()
-        .setTitle(data.username)
+        .setTitle(escapeMarkdown(data.username))
         .setThumbnail("attachment://avatar.png");
     embeds.push(mainEmbed);
     if (entries.length === 0) {
@@ -161,7 +162,8 @@ export async function createGuildRecap(
         const exp = diff.find((x) => x.name === "Guild Experience")?.value ?? 0;
         const expFormat = numberFormat1.format(exp);
         const prefix2 = prefix ? prefix + " " : "";
-        content += `${i}. **${prefix2}${username}** ${expFormat} Guild Experience\n`;
+        const username2 = escapeMarkdown(username);
+        content += `${i}. **${prefix2}${username2}** ${expFormat} Guild Experience\n`;
     }
     content += `-# ${dYest} - ${dToday}\n`;
 

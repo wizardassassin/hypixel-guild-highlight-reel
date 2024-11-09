@@ -2,6 +2,7 @@ import {
     AttachmentBuilder,
     ChatInputCommandInteraction,
     EmbedBuilder,
+    escapeMarkdown,
     InteractionContextType,
     SlashCommandBuilder,
 } from "discord.js";
@@ -58,7 +59,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const { uuid, username: username2 } =
         await MojangFetcher.instance.getProfile(username);
     if (!uuid) {
-        await interaction.reply(`${username} was not found.`);
+        await interaction.reply(`${escapeMarkdown(username)} was not found.`);
         return;
     }
     const data = await queryPlayerDataLoose(
@@ -69,8 +70,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const dYest = dateYesterday.toFormat("MM/dd/yy");
     const dToday = dateToday.toFormat("MM/dd/yy");
     if (data?.PlayerStats?.length !== 2) {
+        const username3 = escapeMarkdown(username2);
         await interaction.reply(
-            `No data could be found for ${username2} in the range ${dYest} - ${dToday}`
+            `No data could be found for ${username3} in the range ${dYest} - ${dToday}`
         );
         return;
     }
