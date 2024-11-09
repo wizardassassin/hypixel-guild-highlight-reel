@@ -1,6 +1,6 @@
 import fs from "fs";
 import { REST } from "@discordjs/rest";
-import { APIApplicationCommandSubcommandOption, Routes } from "discord.js";
+import { APIApplicationCommand, Routes } from "discord.js";
 
 const cwd = import.meta.dirname;
 
@@ -32,7 +32,7 @@ try {
 
     const data = (await rest.put(route, {
         body: commands,
-    })) as Array<APIApplicationCommandSubcommandOption>;
+    })) as Array<APIApplicationCommand>;
 
     console.log(
         `Successfully reloaded ${data.length} application (/) commands.`
