@@ -69,7 +69,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     );
     const dYest = dateYesterday.toFormat("MM/dd/yy");
     const dToday = dateToday.toFormat("MM/dd/yy");
-    if (data?.PlayerStats?.length !== 2) {
+    if (
+        data?.PlayerStats?.length !== 2 &&
+        data.PlayerStats[0].id === data.PlayerStats[1].id
+    ) {
         const username3 = escapeMarkdown(username2);
         await interaction.reply(
             `No data could be found for ${username3} in the range ${dYest} - ${dToday}`
