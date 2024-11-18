@@ -82,7 +82,8 @@ export async function getGuildData(uuid: string, waitUntil?: Date) {
 export async function updateGuild(
     guildIdInternal: string,
     data: Awaited<ReturnType<typeof getGuildData>>,
-    dateObj = DateTime.now().setZone("America/New_York")
+    dateObj = DateTime.now().setZone("America/New_York"),
+    blobHash?: string
 ) {
     const dateNow = dateObj.startOf("day");
     // dateSunday just works
@@ -183,17 +184,25 @@ export async function updateGuild(
             name: data.guildData.name,
         },
     });
-    const rawData = JSON.stringify({
-        timestamp: date,
-        createdAt: dateToday,
-        guildData: data.guildData.json,
-        playerData: data.playerData.map((x) => x.json),
-        skyblockData: data.skyblockData.map((x) => x.json),
-        housingData: data.housingData.map((x) => x.json),
-    });
-    const hash = crypto.createHash("sha256").update(rawData).digest("hex");
-    const timestamp = date.getTime();
-    await fs.writeFile(`./blob/${timestamp}_${hash}`, await gzip(rawData));
+    console.time("Compress");
+    let rawHash: string;
+    if (!blobHash) {
+        const rawData = JSON.stringify({
+            timestamp: date,
+            createdAt: dateToday,
+            guildData: data.guildData.json,
+            playerData: data.playerData.map((x) => x.json),
+            skyblockData: data.skyblockData.map((x) => x.json),
+            housingData: data.housingData.map((x) => x.json),
+        });
+        const hash = crypto.createHash("sha256").update(rawData).digest("hex");
+        rawHash = hash;
+        const timestamp = date.getTime();
+        await fs.writeFile(`./blob/${timestamp}_${hash}`, await gzip(rawData));
+    } else {
+        rawHash = blobHash;
+    }
+    console.timeEnd("Compress");
     const playerData = data.memberUUIDs.map((x) => ({
         id: playerIdInternalMap.get(x),
         uuid: x,
@@ -227,7 +236,7 @@ export async function updateGuild(
                     })),
                 },
             },
-            rawDataHash: hash,
+            rawDataHash: rawHash,
         },
     });
 }

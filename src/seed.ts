@@ -23,7 +23,9 @@ const guild = await prisma.guild.findUnique({
 });
 async function seedFile(filename: string) {
     console.log("Seeding:", filename);
+    console.time("Decompress");
     const timestamp = Number(filename.split("_")[0]);
+    const rawHash = String(filename.split("_")[1]);
     const file = await fs.readFile("./blob/" + filename);
     const json = JSON.parse(zlib.gunzipSync(file).toString());
     const guildData = parseGuildEndpointData(json.guildData);
@@ -41,16 +43,15 @@ async function seedFile(filename: string) {
             parseHousingEndpointData(x, memberUUIDs[i])
         ),
     };
-    await updateGuild(
-        guild.id,
-        manualData,
-        DateTime.fromMillis(timestamp).setZone("America/New_York")
-    );
+    const dateObj = DateTime.fromMillis(timestamp).setZone("America/New_York");
+    console.timeEnd("Decompress");
+    await updateGuild(guild.id, manualData, dateObj, rawHash);
 }
-await prisma.guildStats.deleteMany();
-const files = (await fs.readdir("./blob/")).filter(
-    (x) => !x.startsWith(".") && x.length === 78
-);
+const stats = await prisma.guildStats.findMany();
+const hashes = stats.map((x) => x.rawDataHash);
+const files = (await fs.readdir("./blob/"))
+    .filter((x) => !x.startsWith(".") && x.length === 78)
+    .filter((x) => !hashes.includes(x.split("_")[1]));
 for (const file of files) {
     await seedFile(file);
 }
