@@ -36,7 +36,7 @@ export async function onCron(
                 guildId,
                 dateToday.minus({ months: 1 }),
                 dateToday,
-                "Monthly Guild Recap",
+                "Monthly Guild Highlight",
                 (content) => client.instanceChannel.send(content)
             );
         }
@@ -45,7 +45,7 @@ export async function onCron(
                 guildId,
                 dateToday.minus({ years: 1 }),
                 dateToday,
-                "Yearly Guild Retrospective",
+                "Yearly Guild Highlight",
                 (content) => client.instanceChannel.send(content)
             );
         }
