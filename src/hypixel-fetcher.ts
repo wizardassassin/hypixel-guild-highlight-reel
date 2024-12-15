@@ -119,7 +119,8 @@ export async function getGuildEndpointData(
     uuid: string,
     idType: "PLAYER" | "GUILD" = "PLAYER",
     date = DateTime.now().setZone("America/New_York").startOf("day").toJSDate(),
-    depth = 0
+    depth = 0,
+    delay = [1000, 5000, 30000, 60000, 300000]
 ) {
     const url =
         idType === "PLAYER"
@@ -133,10 +134,16 @@ export async function getGuildEndpointData(
         .startOf("day");
     if (date3.toMillis() !== date2.getTime()) {
         console.error(date3.toJSDate(), date2);
-        if (depth < 5) {
-            console.error("Date mismatch, waiting 5 seconds.");
-            await sleep(5000);
-            return await getGuildEndpointData(uuid, idType, date, depth + 1);
+        if (depth < 7) {
+            console.error(`Date mismatch, waiting ${delay[0] / 1000} seconds.`);
+            await sleep(delay[0]);
+            return await getGuildEndpointData(
+                uuid,
+                idType,
+                date,
+                depth + 1,
+                delay.length > 1 ? delay.slice(1) : delay
+            );
         }
         throw new Error("Date mismatch");
     }
