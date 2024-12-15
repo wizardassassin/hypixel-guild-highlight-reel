@@ -83,11 +83,11 @@ export async function createStatsEmbed(data: statsEmbedDataType) {
     return message;
 }
 
-export async function createGuildRecap(
+export async function createGuildHighlight(
     guildId: string,
     dateYesterday: DateTime<true> | DateTime<false>,
     dateToday: DateTime<true> | DateTime<false>,
-    recapName: string,
+    highlightName: string,
     sendMessage: (content: string) => Promise<Message<boolean>>
 ) {
     let data = await queryGuildDataLoose(
@@ -150,7 +150,7 @@ export async function createGuildRecap(
         )
         .reduce((a, b) => a + b, 0);
     const numberFormat1 = new Intl.NumberFormat("en-US", {});
-    let content = `# __${recapName}__\n`;
+    let content = `# __${highlightName}__\n`;
     content += `## __Overall Stats__\n`;
     content += `    ⫸ **${totalExp}** Guild Experience Gained\n\n`;
     content += `    ⫸ **${totalWins}** Total Wins\n\n`;
@@ -169,7 +169,7 @@ export async function createGuildRecap(
 
     const reply = await sendMessage(content);
     const thread = await reply.startThread({
-        name: recapName.replace(/\\/g, ""),
+        name: highlightName.replace(/\\/g, ""),
     });
     for (const playerData of guildData) {
         await thread.send(await createStatsEmbed(playerData));

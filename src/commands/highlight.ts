@@ -7,11 +7,11 @@ import {
 } from "discord.js";
 import { DateTime } from "luxon";
 import { diffPlayerStats, queryGuildData } from "../db-query.js";
-import { createGuildRecap, createStatsEmbed } from "../recap-format.js";
+import { createGuildHighlight, createStatsEmbed } from "../recap-format.js";
 
 export const data = new SlashCommandBuilder()
-    .setName("recap")
-    .setDescription("Gets a recap of the entire guild!")
+    .setName("highlight")
+    .setDescription("Gets a highlight of the entire guild!")
     .addStringOption((option) =>
         option.setName("start").setDescription("Start time (MM/dd/yy).")
     )
@@ -42,11 +42,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     }
     const dateYesterday = startParsed2;
     const dateToday = endParsed2;
-    await createGuildRecap(
+    await createGuildHighlight(
         interaction.guildId,
         dateYesterday,
         dateToday,
-        "Custom Guild Recap",
+        "Custom Guild Highlight",
         (content) =>
             interaction.reply({
                 content: content,

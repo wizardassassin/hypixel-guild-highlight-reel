@@ -1,6 +1,6 @@
 import { Client } from "discord.js";
 import { DateTime } from "luxon";
-import { createGuildRecap } from "./recap-format.js";
+import { createGuildHighlight } from "./recap-format.js";
 
 const guildId = process.env.DISCORD_GUILD_ID;
 
@@ -23,7 +23,7 @@ export async function onCron(
         const dateObj = DateTime.now().setZone("America/New_York");
         const dateToday = dateObj.startOf("day");
         if (isStartOfWeek(dateObj)) {
-            await createGuildRecap(
+            await createGuildHighlight(
                 guildId,
                 dateToday.minus({ weeks: 1 }),
                 dateToday,
@@ -32,7 +32,7 @@ export async function onCron(
             );
         }
         if (isStartOfMonth(dateObj)) {
-            await createGuildRecap(
+            await createGuildHighlight(
                 guildId,
                 dateToday.minus({ months: 1 }),
                 dateToday,
@@ -41,7 +41,7 @@ export async function onCron(
             );
         }
         if (isStartOfYear(dateObj)) {
-            await createGuildRecap(
+            await createGuildHighlight(
                 guildId,
                 dateToday.minus({ years: 1 }),
                 dateToday,
