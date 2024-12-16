@@ -14,11 +14,7 @@ import { DateTime } from "luxon";
 import { promisify } from "util";
 import { sleep } from "./utils.js";
 
-export async function createGuild(
-    discordGuildID: string,
-    discordChannelID: string,
-    playerUUID: string
-) {
+export async function createGuild(discordGuildID: string, playerUUID: string) {
     const guildData = await getGuildEndpointData(playerUUID, "PLAYER");
     const guild = await prisma.guild.create({
         data: {
@@ -48,12 +44,22 @@ const gzip = promisify(zlib.gzip);
  * Called 5 minutes before 12:00AM PST/PDT
  *
  */
-export async function getGuildData(uuid: string, waitUntil?: Date) {
-    const guildDataOld = await getGuildEndpointData(uuid, "GUILD");
-    const housingData = await getGuildMemberData(
-        guildDataOld.memberUUIDs,
-        getHousingEndpointData
-    );
+export async function getGuildData(
+    uuid: string,
+    waitUntil?: Date,
+    housingStore?: Awaited<ReturnType<typeof getHousingEndpointData>>[]
+) {
+    const getHousingData = async () => {
+        if (housingStore?.length !== 0) return housingStore;
+        const guildDataOld = await getGuildEndpointData(uuid, "GUILD");
+        const housingData = await getGuildMemberData(
+            guildDataOld.memberUUIDs,
+            getHousingEndpointData
+        );
+        housingStore.push(...housingData);
+        return housingData;
+    };
+    const housingData = await getHousingData();
     if (waitUntil) await sleep(waitUntil.getTime() - Date.now());
     const guildData = await getGuildEndpointData(uuid, "GUILD", waitUntil);
     const memberUUIDs = guildData.memberUUIDs;
