@@ -63,7 +63,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         return;
     }
 
-    const msg = await interaction.reply("Creating guild highlight...");
+    await interaction.reply("Creating guild highlight...");
 
     await createGuildHighlight(
         interaction.guildId,
@@ -73,5 +73,5 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         (content) => interaction.client.instanceChannel.send(content)
     );
 
-    await msg.edit("Creating guild highlight...Done!");
+    interaction.editReply("Creating guild highlight...Done!");
 }
