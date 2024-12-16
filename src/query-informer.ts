@@ -20,35 +20,39 @@ export async function onCron(
         await client.instanceChannel.send("⚠️ ⚠️ Fetching Data Failed ⚠️ ⚠️");
     }
     if (didSucceed) {
-        const dateObj = DateTime.now().setZone("America/New_York");
-        const dateToday = dateObj.startOf("day");
-        if (isStartOfWeek(dateObj)) {
-            await createGuildHighlight(
-                guildId,
-                dateToday.minus({ weeks: 1 }),
-                dateToday,
-                "Weekly Guild Highlight",
-                (content) => client.instanceChannel.send(content)
-            );
-        }
-        if (isStartOfMonth(dateObj)) {
-            await createGuildHighlight(
-                guildId,
-                dateToday.minus({ months: 1 }),
-                dateToday,
-                "Monthly Guild Highlight",
-                (content) => client.instanceChannel.send(content)
-            );
-        }
-        if (isStartOfYear(dateObj)) {
-            await createGuildHighlight(
-                guildId,
-                dateToday.minus({ years: 1 }),
-                dateToday,
-                "Yearly Guild Highlight",
-                (content) => client.instanceChannel.send(content)
-            );
-        }
+        await createHighlights(client);
+    }
+}
+
+export async function createHighlights(client: Client<true>) {
+    const dateObj = DateTime.now().setZone("America/New_York");
+    const dateToday = dateObj.startOf("day");
+    if (isStartOfWeek(dateObj)) {
+        await createGuildHighlight(
+            guildId,
+            dateToday.minus({ weeks: 1 }),
+            dateToday,
+            "Weekly Guild Highlight",
+            (content) => client.instanceChannel.send(content)
+        );
+    }
+    if (isStartOfMonth(dateObj)) {
+        await createGuildHighlight(
+            guildId,
+            dateToday.minus({ months: 1 }),
+            dateToday,
+            "Monthly Guild Highlight",
+            (content) => client.instanceChannel.send(content)
+        );
+    }
+    if (isStartOfYear(dateObj)) {
+        await createGuildHighlight(
+            guildId,
+            dateToday.minus({ years: 1 }),
+            dateToday,
+            "Yearly Guild Highlight",
+            (content) => client.instanceChannel.send(content)
+        );
     }
 }
 

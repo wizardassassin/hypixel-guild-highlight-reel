@@ -4,6 +4,9 @@ import { sleep } from "./utils.js";
 import prisma from "./db.js";
 import { DateTime } from "luxon";
 import assert from "assert/strict";
+import { setBlob } from "./blob-util.js";
+
+const guildId = process.env.DISCORD_GUILD_ID;
 
 async function dailyCron() {
     const dateObj = DateTime.now().setZone("America/New_York");
@@ -13,20 +16,25 @@ async function dailyCron() {
         dateToday.toMillis(),
         dateObj.plus({ minutes: 5 }).startOf("day").toMillis()
     );
+    const housingStore: Parameters<typeof getGuildData>[2] = [];
     try {
-        const guilds = await prisma.guild.findMany();
-        await Promise.all(
-            guilds.map(async (guild) => {
-                const guildData = await getGuildData(
-                    guild.guildIdHypixel,
-                    dateToday.toJSDate()
-                );
-                await updateGuild(guild.id, guildData);
-            })
+        const guild = await prisma.guild.findUnique({
+            where: {
+                guildIdDiscord: guildId,
+            },
+        });
+        const guildData = await getGuildData(
+            guild.guildIdHypixel,
+            dateToday.toJSDate(),
+            housingStore
         );
+        await updateGuild(guild.id, guildData);
         return true;
     } catch (error) {
         console.error(error);
+        if (housingStore.length !== 0) {
+            setBlob("cookie_cache", Buffer.from(JSON.stringify(housingStore)));
+        }
         return false;
     }
 }

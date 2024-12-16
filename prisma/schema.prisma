@@ -7,6 +7,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model BlobStorage {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  name      String   @unique
+  blob      Bytes
+}
+
 model PlayerStats {
   id                 String     @id @default(uuid())
   createdAt          DateTime   @default(now())
