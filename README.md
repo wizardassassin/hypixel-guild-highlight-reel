@@ -39,8 +39,28 @@ npm run deploy-cmd
 npm run deploy-db
 ```
 
+Add the guild entry.
+
+```bash
+npm run create-guild
+```
+
 Run the code.
 
 ```bash
 npm run dev
+```
+
+## Useful Commands
+
+Seeding the database.
+
+```bash
+npm run seed
+```
+
+Deleting the database.
+
+```bash
+npm run reset-db
 ```

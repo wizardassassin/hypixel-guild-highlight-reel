@@ -10,6 +10,9 @@
     "dev": "node --env-file=.env ./dist/index.js",
     "deploy-cmd": "node --env-file=.env ./dist/deploy-commands.js",
     "deploy-db": "prisma generate && prisma migrate deploy",
+    "create-guild": "node --env-file=.env ./dist/create-guild.js",
+    "reset-db": "node --env-file=.env ./dist/reset-db.js",
+    "seed": "node --env-file=.env ./dist/seed.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
