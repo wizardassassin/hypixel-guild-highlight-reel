@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
-    "dev": "node --env-file=.env ./dist/index.js",
+    "dev": "node --enable-source-maps --env-file=.env ./dist/index.js",
     "deploy-cmd": "node --env-file=.env ./dist/deploy-commands.js",
     "deploy-db": "prisma generate && prisma migrate deploy",
     "create-guild": "node --env-file=.env ./dist/create-guild.js",

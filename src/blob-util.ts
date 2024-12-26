@@ -1,6 +1,6 @@
 import prisma from "./db.js";
 
-export async function setBlob(name: string, blob: Buffer) {
+export async function setBlob(name: string, blob: Buffer, date?: Date) {
     await prisma.blobStorage.upsert({
         where: {
             name: name,
@@ -8,9 +8,11 @@ export async function setBlob(name: string, blob: Buffer) {
         create: {
             name: name,
             blob: blob,
+            ...(date && { createdAt: date }),
         },
         update: {
             blob: blob,
+            ...(date && { createdAt: date }),
         },
     });
 }
