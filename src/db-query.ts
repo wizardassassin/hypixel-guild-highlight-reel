@@ -247,10 +247,12 @@ type playerStat = Prisma.Result<
 
 type parsedPlayerStat = ReturnType<typeof parsePlayerStat>;
 
-const parsePlayerStat = (stat: playerStat) => ({
+const decoder = new TextDecoder();
+
+export const parsePlayerStat = (stat: playerStat) => ({
     createdAt: stat.createdAt,
     stats: {
-        ...(JSON.parse(stat.playerStats.toString()) as PlayerStatsType),
+        ...(JSON.parse(decoder.decode(stat.playerStats)) as PlayerStatsType),
         experience: stat.experience,
         questParticipation: stat.questParticipation,
         skyblockExperience: stat.skyblockExperience,
