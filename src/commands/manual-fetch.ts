@@ -82,8 +82,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         return;
     }
 
+    const decoder = new TextDecoder();
     const housingStore = useCache
-        ? JSON.parse(cookieCache.blob.toString())
+        ? JSON.parse(decoder.decode(cookieCache.blob))
         : [];
 
     if (interaction.client.cronIsRunning) {
