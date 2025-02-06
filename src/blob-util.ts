@@ -12,7 +12,7 @@ export async function setBlob(name: string, blob: Buffer, date?: Date) {
         },
         update: {
             blob: blob,
-            ...(date && { createdAt: date }),
+            ...((date && { createdAt: date }) || { createdAt: new Date() }),
         },
     });
 }
