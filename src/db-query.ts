@@ -283,7 +283,7 @@ export function diffGuildStats(startStat: guildStat, stopStat: guildStat) {
     };
 }
 
-const statKeyMap: {
+export const statKeyMap: {
     name: string;
     getStat: (stat: parsedPlayerStat) => number;
 }[] = [
