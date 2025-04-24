@@ -38,7 +38,7 @@ export const data = new SlashCommandBuilder()
         option
             .setName("derivative")
             .setDescription(
-                "Take a symmetric derivative over a time interval (days)."
+                "Take a symmetric derivative over a data point interval (weeks)."
             )
     )
     .addIntegerOption((option) =>
@@ -75,6 +75,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         );
         return;
     }
+    await interaction.deferReply();
     const data = await interaction.client.db.player.findUnique({
         where: {
             uuid: uuid,
@@ -95,8 +96,21 @@ export async function execute(interaction: ChatInputCommandInteraction) {
             },
         },
     });
+    const dateObj = DateTime.now().setZone("America/New_York");
+    const dateToday = dateObj.startOf("day");
+    const dateOneMonth = dateToday.minus({ months: 1 });
+    // week aligned
+    if (data?.PlayerStats) {
+        data.PlayerStats = data?.PlayerStats.filter((x) => {
+            const isSunday =
+                DateTime.fromJSDate(x.createdAt, {
+                    zone: "America/New_York",
+                }).weekday === 7;
+            return isSunday;
+        });
+    }
     if (!data || (data?.PlayerStats?.length ?? 0) === 0) {
-        await interaction.reply(
+        await interaction.editReply(
             "No data was found for " + escapeMarkdown(username2)
         );
         return;
@@ -115,7 +129,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     };
     const statGetter = getStatGetter();
     if (!statGetter) {
-        await interaction.reply(
+        await interaction.editReply(
             `${escapeMarkdown(statName)} stat was not found.`
         );
         return;
@@ -140,7 +154,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         }
     }
     if (data2.length === 0) {
-        await interaction.reply(`The derivative interval was too large.`);
+        await interaction.editReply(`The derivative interval was too large.`);
         return;
     }
 
@@ -274,7 +288,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const file = new AttachmentBuilder(image, {
         name: "graph.png",
     });
-    await interaction.reply({
+    await interaction.editReply({
         embeds: [embed],
         files: [file],
     });

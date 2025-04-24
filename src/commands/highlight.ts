@@ -40,8 +40,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         );
         return;
     }
-    const dateYesterday = startParsed2;
-    const dateToday = endParsed2;
+    // week aligned
+    const dateYesterday = startParsed2.startOf("week").minus({ days: 1 });
+    const dateToday = endParsed2.startOf("week").plus({ days: 6 });
     await createGuildHighlight(
         interaction.guildId,
         dateYesterday,
