@@ -49,9 +49,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         dateToday,
         "Custom Guild Highlight",
         (content) =>
-            interaction.reply({
-                content: content,
-                fetchReply: true,
-            })
+            interaction
+                .reply({
+                    content: content,
+                    withResponse: true,
+                })
+                .then((x) => x.resource.message)
     );
 }

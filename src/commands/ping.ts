@@ -12,7 +12,6 @@ export const data = new SlashCommandBuilder()
 export async function execute(interaction: ChatInputCommandInteraction) {
     const sent = await interaction.reply({
         content: "Pinging...",
-        fetchReply: true,
     });
     await interaction.editReply(
         `\`Websocket heartbeat:\` ${
