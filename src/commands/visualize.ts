@@ -41,6 +41,12 @@ export const data = new SlashCommandBuilder()
                 "Take a symmetric derivative over a time interval (days)."
             )
     )
+    .addIntegerOption((option) =>
+        option.setName("min-y").setDescription("Min y value for the y-axis.")
+    )
+    .addIntegerOption((option) =>
+        option.setName("max-y").setDescription("Max y value for the y-axis.")
+    )
     .setContexts(InteractionContextType.Guild);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -155,10 +161,15 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         d3.extent(data2, (d) => d.time),
         [marginLeft, width - marginRight]
     );
-    const y = d3.scaleLinear(
-        [d3.min(data2, (d) => d.value), d3.max(data2, (d) => d.value)],
-        [height - marginBottom, marginTop]
+    const minY = Math.min(
+        interaction.options.getInteger("min-y") ?? Infinity,
+        d3.min(data2, (d) => d.value)
     );
+    const maxY = Math.max(
+        interaction.options.getInteger("max-y") ?? -Infinity,
+        d3.max(data2, (d) => d.value)
+    );
+    const y = d3.scaleLinear([minY, maxY], [height - marginBottom, marginTop]);
 
     const line = d3
         .line<(typeof data2)[number]>()
