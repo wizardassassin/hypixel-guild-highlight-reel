@@ -20,10 +20,11 @@ export class ExpiringCache<K, V> {
     delete(key: K) {
         return this.#cache.delete(key);
     }
-    async getOrFetch(key: K, fetcher: () => Promise<V>) {
+    async getOrFetch(key: K, fetcher: () => Promise<V | undefined>) {
         const value1 = this.get(key);
         if (value1 !== undefined) return value1;
         const value2 = await fetcher();
+        if (!value2) return;
         this.set(key, value2);
         return value2;
     }

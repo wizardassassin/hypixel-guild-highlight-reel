@@ -16,7 +16,10 @@ const fetchJson = async (url: string): Promise<any> => {
     const res = await fetch(url, { signal: AbortSignal.timeout(60000) });
     if (!res.ok) {
         console.error(await res.text(), res.status);
-        throw new Error("Invalid Response Code");
+        // @ts-expect-error
+        throw new Error("Invalid Response Code", {
+            cause: { code: res.status },
+        });
     }
     const json = await res.json();
     return json;
@@ -30,7 +33,10 @@ const fetchBlob = async (url: string): Promise<Blob> => {
     const res = await fetch(url, { signal: AbortSignal.timeout(60000) });
     if (!res.ok) {
         console.error(await res.text(), res.status);
-        throw new Error("Invalid Response Code");
+        // @ts-expect-error
+        throw new Error("Invalid Response Code", {
+            cause: { code: res.status },
+        });
     }
     const blob = await res.blob();
     return blob;
@@ -176,9 +182,17 @@ export class MojangFetcher {
     }
     async getProfile(username: string) {
         username = username.toLowerCase();
-        const profile = await this.#uuidCache.getOrFetch(username, () =>
-            simpleRetryer(() => getProfile(username))
-        );
+        const profile = (await this.#uuidCache.getOrFetch(username, () =>
+            simpleRetryer(async () => {
+                try {
+                    return await getProfile(username);
+                } catch (error) {
+                    if (error?.cause?.code !== 404) throw error;
+                    console.error(error);
+                    return;
+                }
+            })
+        )) ?? { uuid: "", username: "" };
         return profile;
     }
     async getAvatar(uuid: string, size = 24) {
