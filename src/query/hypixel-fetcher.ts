@@ -1,5 +1,5 @@
 import fs from "fs/promises";
-import { sleep } from "./utils.js";
+import { sleep } from "../utils/utils.js";
 import { DateTime } from "luxon";
 // TODO: housing, skyblock
 

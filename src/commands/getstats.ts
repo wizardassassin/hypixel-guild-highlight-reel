@@ -6,15 +6,15 @@ import {
     InteractionContextType,
     SlashCommandBuilder,
 } from "discord.js";
-import { PlayerEndpointType } from "../hypixel-fetcher.js";
+import { PlayerEndpointType } from "../query/hypixel-fetcher.js";
 import { DateTime } from "luxon";
 import {
     diffPlayerStats,
     queryPlayerData,
     queryPlayerDataLoose,
-} from "../db-query.js";
+} from "../db/db-query.js";
 import { createStatsEmbed } from "../recap-format.js";
-import { MojangFetcher } from "../skin-fetcher.js";
+import { MojangFetcher } from "../query/skin-fetcher.js";
 
 export const data = new SlashCommandBuilder()
     .setName("getstats")

@@ -1,8 +1,8 @@
-import { createGuild, updateGuild } from "./db-update.js";
+import { createGuild, updateGuild } from "./db/db-update.js";
 import {
     getGuildEndpointData,
     getPlayerEndpointData,
-} from "./hypixel-fetcher.js";
+} from "./query/hypixel-fetcher.js";
 import cron from "node-cron";
 import fs from "fs";
 import {
@@ -14,7 +14,7 @@ import {
     TextChannel,
 } from "discord.js";
 import { GenericCommandModule } from "./types/discord.js";
-import prisma from "./db.js";
+import prisma from "./db/db.js";
 import { initCron } from "./query-store.js";
 import { onCron } from "./query-informer.js";
 

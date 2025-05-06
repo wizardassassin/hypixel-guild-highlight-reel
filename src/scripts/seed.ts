@@ -1,5 +1,5 @@
 import { DateTime } from "luxon";
-import prisma from "./db.js";
+import prisma from "../db/db.js";
 import fs from "fs/promises";
 import crypto from "crypto";
 import zlib from "zlib";
@@ -10,9 +10,9 @@ import {
     parseHousingEndpointData,
     parsePlayerEndpointData,
     parseSkyBlockEndpointData,
-} from "./hypixel-fetcher.js";
-import { getGuildData, updateGuild } from "./db-update.js";
-import { sleep } from "./utils.js";
+} from "../query/hypixel-fetcher.js";
+import { getGuildData, updateGuild } from "../db/db-update.js";
+import { sleep } from "../utils/utils.js";
 
 const guildId = process.env.DISCORD_GUILD_ID;
 

@@ -6,12 +6,12 @@ import {
     InteractionContextType,
     SlashCommandBuilder,
 } from "discord.js";
-import { parsePlayerStat, statKeyMap } from "../db-query.js";
+import { parsePlayerStat, statKeyMap } from "../db/db-query.js";
 import sharp from "sharp";
 import { JSDOM } from "jsdom";
 import * as d3 from "d3";
 import { DateTime } from "luxon";
-import { MojangFetcher } from "../skin-fetcher.js";
+import { MojangFetcher } from "../query/skin-fetcher.js";
 
 export const data = new SlashCommandBuilder()
     .setName("visualize")

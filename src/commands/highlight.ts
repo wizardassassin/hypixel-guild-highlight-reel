@@ -6,7 +6,7 @@ import {
     SlashCommandBuilder,
 } from "discord.js";
 import { DateTime } from "luxon";
-import { diffPlayerStats, queryGuildData } from "../db-query.js";
+import { diffPlayerStats, queryGuildData } from "../db/db-query.js";
 import { createGuildHighlight, createStatsEmbed } from "../recap-format.js";
 
 export const data = new SlashCommandBuilder()

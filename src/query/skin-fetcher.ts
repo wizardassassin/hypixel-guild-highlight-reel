@@ -4,8 +4,8 @@ import {
     createCanvas,
     loadImage,
 } from "canvas";
-import { ExpiringCache } from "./expiring-cache.js";
-import { simpleRetryer } from "./utils.js";
+import { ExpiringCache } from "../utils/expiring-cache.js";
+import { simpleRetryer } from "../utils/utils.js";
 
 /**
  *

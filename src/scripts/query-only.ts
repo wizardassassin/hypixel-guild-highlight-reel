@@ -1,4 +1,4 @@
-import { initCron } from "./query-store.js";
+import { initCron } from "../query-store.js";
 
 initCron(async (cronType, cronPromise) => {
     console.log(cronType);

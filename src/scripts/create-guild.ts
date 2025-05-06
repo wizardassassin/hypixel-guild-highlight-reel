@@ -1,5 +1,5 @@
-import { createGuild } from "./db-update.js";
-import { MojangFetcher } from "./skin-fetcher.js";
+import { createGuild } from "../db/db-update.js";
+import { MojangFetcher } from "../query/skin-fetcher.js";
 
 const guildId = process.env.DISCORD_GUILD_ID;
 

@@ -9,9 +9,9 @@ import {
     diffPlayerStats,
     queryGuildData,
     queryGuildDataLoose,
-} from "./db-query.js";
+} from "./db/db-query.js";
 import { DateTime } from "luxon";
-import { MojangFetcher } from "./skin-fetcher.js";
+import { MojangFetcher } from "./query/skin-fetcher.js";
 
 type statsEmbedDataType = {
     username: string;

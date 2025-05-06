@@ -1,10 +1,10 @@
 import cron from "node-cron";
-import { getGuildData, updateGuild } from "./db-update.js";
-import { sleep } from "./utils.js";
-import prisma from "./db.js";
+import { getGuildData, updateGuild } from "./db/db-update.js";
+import { sleep } from "./utils/utils.js";
+import prisma from "./db/db.js";
 import { DateTime } from "luxon";
 import assert from "assert/strict";
-import { setBlob } from "./blob-util.js";
+import { setBlob } from "./db/blob-util.js";
 
 const guildId = process.env.DISCORD_GUILD_ID;
 

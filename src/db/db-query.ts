@@ -1,6 +1,9 @@
 import { Prisma } from "@prisma/client";
 import prisma from "./db.js";
-import { PlayerEndpointType, PlayerStatsType } from "./hypixel-fetcher.js";
+import {
+    PlayerEndpointType,
+    PlayerStatsType,
+} from "../query/hypixel-fetcher.js";
 
 export async function queryGuildDataLoose(
     guildId: string,

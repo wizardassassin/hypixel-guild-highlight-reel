@@ -68,5 +68,5 @@ npm run reset-db
 Fetching data independent of the discord bot.
 
 ```bash
-node --env-file=.env ./dist/query-only.js
+node --env-file=.env ./dist/scripts/query-only.js
 ```

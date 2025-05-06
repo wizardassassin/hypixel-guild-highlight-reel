@@ -6,8 +6,8 @@ import {
     SlashCommandBuilder,
 } from "discord.js";
 import { DateTime } from "luxon";
-import { getGuildData, updateGuild } from "../db-update.js";
-import { getBlob, setBlob } from "../blob-util.js";
+import { getGuildData, updateGuild } from "../db/db-update.js";
+import { getBlob, setBlob } from "../db/blob-util.js";
 import { createHighlights } from "../query-informer.js";
 
 export const data = new SlashCommandBuilder()

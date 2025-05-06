@@ -9,10 +9,10 @@ import {
     getSkyBlockEndpointData,
     PlayerEndpointType,
     PlayerStatsType,
-} from "./hypixel-fetcher.js";
+} from "../query/hypixel-fetcher.js";
 import { DateTime } from "luxon";
 import { promisify } from "util";
-import { sleep } from "./utils.js";
+import { sleep } from "../utils/utils.js";
 
 export async function createGuild(discordGuildID: string, playerUUID: string) {
     const guildData = await getGuildEndpointData(playerUUID, "PLAYER");
