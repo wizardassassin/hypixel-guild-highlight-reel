@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-        // "incremental": true,
+        "incremental": true,
         "module": "NodeNext",
         "moduleResolution": "NodeNext",
         "target": "ES2020",
