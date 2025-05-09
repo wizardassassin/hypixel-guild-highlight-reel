@@ -12,7 +12,7 @@ import {
 } from "../query/hypixel-fetcher.js";
 import { DateTime } from "luxon";
 import { promisify } from "util";
-import { sleep } from "../utils/utils.js";
+import { simpleRetryer, sleep } from "../utils/utils.js";
 
 export async function createGuild(discordGuildID: string, playerUUID: string) {
     const guildData = await getGuildEndpointData(playerUUID, "PLAYER");
@@ -54,22 +54,25 @@ export async function getGuildData(
         const guildDataOld = await getGuildEndpointData(uuid, "GUILD");
         const housingData = await getGuildMemberData(
             guildDataOld.memberUUIDs,
-            getHousingEndpointData
+            (arg0) =>
+                simpleRetryer(
+                    () => getHousingEndpointData(arg0),
+                    5,
+                    [1000, 2000]
+                )
         );
         housingStore.push(...housingData);
         return housingData;
     };
     const housingData = await getHousingData();
-    if (waitUntil) await sleep(waitUntil.getTime() - Date.now());
+    if (waitUntil) await sleep(waitUntil.getTime() - Date.now() + 2000); // 2 second buffer
     const guildData = await getGuildEndpointData(uuid, "GUILD", waitUntil);
     const memberUUIDs = guildData.memberUUIDs;
-    const playerData = await getGuildMemberData(
-        memberUUIDs,
-        getPlayerEndpointData
+    const playerData = await getGuildMemberData(memberUUIDs, (arg0) =>
+        simpleRetryer(() => getPlayerEndpointData(arg0))
     );
-    const skyblockData = await getGuildMemberData(
-        memberUUIDs,
-        getSkyBlockEndpointData
+    const skyblockData = await getGuildMemberData(memberUUIDs, (arg0) =>
+        simpleRetryer(() => getSkyBlockEndpointData(arg0))
     );
 
     return {
