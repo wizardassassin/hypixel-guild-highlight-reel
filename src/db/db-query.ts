@@ -266,12 +266,493 @@ export const parsePlayerStat = (stat: playerStat) => ({
 export function diffPlayerStats(startStat: playerStat, stopStat: playerStat) {
     const firstStat = parsePlayerStat(startStat);
     const lastStat = parsePlayerStat(stopStat);
-    return statKeyMap
-        .map((x) => ({
-            name: x.name,
-            value: x.getStat(lastStat) - x.getStat(firstStat),
-        }))
-        .filter((x) => x.value !== 0);
+    const stats: {
+        name: string;
+        thumbnail: string;
+        stats: { name: string; value: number }[];
+    }[] = [
+        {
+            name: "General",
+            thumbnail: "./files/Arcade_Games.png",
+            stats: [
+                {
+                    name: "Achievement Points",
+                    value:
+                        lastStat.stats.achievementPoints -
+                        firstStat.stats.achievementPoints,
+                },
+                {
+                    name: "Hypixel Network Experience",
+                    value:
+                        lastStat.stats.hypixelExperience -
+                        firstStat.stats.hypixelExperience,
+                },
+                {
+                    name: "Karma",
+                    value: lastStat.stats.karma - firstStat.stats.karma,
+                },
+                {
+                    name: "Quests Completed",
+                    value:
+                        lastStat.stats.questsCompleted -
+                        firstStat.stats.questsCompleted,
+                },
+                {
+                    name: "Guild Experience",
+                    value:
+                        lastStat.stats.experience - firstStat.stats.experience,
+                },
+                {
+                    name: "Guild Quest Participation",
+                    value:
+                        lastStat.stats.questParticipation -
+                        firstStat.stats.questParticipation,
+                },
+            ],
+        },
+        {
+            name: "Arcade Games",
+            thumbnail: "./files/Arcade_Games.png",
+            stats: [
+                {
+                    name: "Wins",
+                    value:
+                        lastStat.stats.arcade.wins -
+                        firstStat.stats.arcade.wins,
+                },
+            ],
+        },
+        {
+            name: "Arena Brawl",
+            thumbnail: "./files/Arena_Brawl.png",
+            stats: [
+                {
+                    name: "Wins",
+                    value:
+                        lastStat.stats.arenaBrawl.wins -
+                        firstStat.stats.arenaBrawl.wins,
+                },
+                {
+                    name: "Kills",
+                    value:
+                        lastStat.stats.arenaBrawl.kills -
+                        firstStat.stats.arenaBrawl.kills,
+                },
+            ],
+        },
+        {
+            name: "Bed Wars",
+            thumbnail: "./files/Bed_Wars.png",
+            stats: [
+                {
+                    name: "Experience",
+                    value:
+                        lastStat.stats.bedWars.experience -
+                        firstStat.stats.bedWars.experience,
+                },
+                {
+                    name: "Wins",
+                    value:
+                        lastStat.stats.bedWars.wins -
+                        firstStat.stats.bedWars.wins,
+                },
+                {
+                    name: "Kills",
+                    value:
+                        lastStat.stats.bedWars.kills -
+                        firstStat.stats.bedWars.kills,
+                },
+            ],
+        },
+        {
+            name: "Blitz Survival Games",
+            thumbnail: "./files/Blitz_Survival_Games.png",
+            stats: [
+                {
+                    name: "Wins",
+                    value:
+                        lastStat.stats.blitzSG.wins -
+                        firstStat.stats.blitzSG.wins,
+                },
+                {
+                    name: "Kills",
+                    value:
+                        lastStat.stats.blitzSG.kills -
+                        firstStat.stats.blitzSG.kills,
+                },
+            ],
+        },
+        {
+            name: "Build Battle",
+            thumbnail: "./files/Build_Battle.png",
+            stats: [
+                {
+                    name: "Score",
+                    value:
+                        lastStat.stats.buildBattle.score -
+                        firstStat.stats.buildBattle.score,
+                },
+                {
+                    name: "Wins",
+                    value:
+                        lastStat.stats.buildBattle.wins -
+                        firstStat.stats.buildBattle.wins,
+                },
+            ],
+        },
+        {
+            name: "Cops and Crims",
+            thumbnail: "./files/Cops_and_Crims.png",
+            stats: [
+                {
+                    name: "Wins",
+                    value:
+                        lastStat.stats.copsAndCrims.wins -
+                        firstStat.stats.copsAndCrims.wins,
+                },
+                {
+                    name: "Kills",
+                    value:
+                        lastStat.stats.copsAndCrims.kills -
+                        firstStat.stats.copsAndCrims.kills,
+                },
+            ],
+        },
+        {
+            name: "Duels",
+            thumbnail: "./files/Duels.png",
+            stats: [
+                {
+                    name: "Wins",
+                    value:
+                        lastStat.stats.duels.wins - firstStat.stats.duels.wins,
+                },
+                {
+                    name: "Kills",
+                    value:
+                        lastStat.stats.duels.kills -
+                        firstStat.stats.duels.kills,
+                },
+            ],
+        },
+        {
+            name: "Housing",
+            thumbnail: "./files/Housing.png",
+            stats: [
+                {
+                    name: "Cookies",
+                    value:
+                        lastStat.stats.housingCookies -
+                        firstStat.stats.housingCookies,
+                },
+            ],
+        },
+        {
+            name: "Mega Walls",
+            thumbnail: "./files/Mega_Walls.png",
+            stats: [
+                {
+                    name: "Wins",
+                    value:
+                        lastStat.stats.megaWalls.wins -
+                        firstStat.stats.megaWalls.wins,
+                },
+                {
+                    name: "Kills",
+                    value:
+                        lastStat.stats.megaWalls.kills -
+                        firstStat.stats.megaWalls.kills,
+                },
+            ],
+        },
+        {
+            name: "Murder Mystery",
+            thumbnail: "./files/Murder_Mystery.png",
+            stats: [
+                {
+                    name: "Wins",
+                    value:
+                        lastStat.stats.murderMystery.wins -
+                        firstStat.stats.murderMystery.wins,
+                },
+                {
+                    name: "Kills",
+                    value:
+                        lastStat.stats.murderMystery.kills -
+                        firstStat.stats.murderMystery.kills,
+                },
+            ],
+        },
+        {
+            name: "Paintball Warfare",
+            thumbnail: "./files/Paintball_Warfare.png",
+            stats: [
+                {
+                    name: "Wins",
+                    value:
+                        lastStat.stats.paintball.wins -
+                        firstStat.stats.paintball.wins,
+                },
+                {
+                    name: "Kills",
+                    value:
+                        lastStat.stats.paintball.kills -
+                        firstStat.stats.paintball.kills,
+                },
+            ],
+        },
+        {
+            name: "The Hypixel Pit",
+            thumbnail: "./files/The_Hypixel_Pit.png",
+            stats: [
+                {
+                    name: "Experience",
+                    value:
+                        lastStat.stats.pit.experience -
+                        firstStat.stats.pit.experience,
+                },
+                {
+                    name: "Kills",
+                    value: lastStat.stats.pit.kills - firstStat.stats.pit.kills,
+                },
+            ],
+        },
+        {
+            name: "Quakecraft",
+            thumbnail: "./files/Quakecraft.png",
+            stats: [
+                {
+                    name: "Wins",
+                    value:
+                        lastStat.stats.quakecraft.wins -
+                        firstStat.stats.quakecraft.wins,
+                },
+                {
+                    name: "Kills",
+                    value:
+                        lastStat.stats.quakecraft.kills -
+                        firstStat.stats.quakecraft.kills,
+                },
+            ],
+        },
+        {
+            name: "SkyBlock",
+            thumbnail: "./files/SkyBlock.png",
+            stats: [
+                {
+                    name: "Experience",
+                    value:
+                        lastStat.stats.skyblockExperience -
+                        firstStat.stats.skyblockExperience,
+                },
+            ],
+        },
+        {
+            name: "SkyWars",
+            thumbnail: "./files/SkyWars.png",
+            stats: [
+                {
+                    name: "Experience",
+                    value:
+                        lastStat.stats.skyWars.experience -
+                        firstStat.stats.skyWars.experience,
+                },
+                {
+                    name: "Wins",
+                    value:
+                        lastStat.stats.skyWars.wins -
+                        firstStat.stats.skyWars.wins,
+                },
+                {
+                    name: "Kills",
+                    value:
+                        lastStat.stats.skyWars.kills -
+                        firstStat.stats.skyWars.kills,
+                },
+            ],
+        },
+        {
+            name: "Smash Heroes",
+            thumbnail: "./files/Smash_Heroes.png",
+            stats: [
+                {
+                    name: "Experience",
+                    value:
+                        lastStat.stats.smashHeroes.experience -
+                        firstStat.stats.smashHeroes.experience,
+                },
+                {
+                    name: "Wins",
+                    value:
+                        lastStat.stats.smashHeroes.wins -
+                        firstStat.stats.smashHeroes.wins,
+                },
+                {
+                    name: "Kills",
+                    value:
+                        lastStat.stats.smashHeroes.kills -
+                        firstStat.stats.smashHeroes.kills,
+                },
+            ],
+        },
+        {
+            name: "Speed UHC",
+            thumbnail: "./files/Speed_UHC.png",
+            stats: [
+                {
+                    name: "Score",
+                    value:
+                        lastStat.stats.speedUHC.score -
+                        firstStat.stats.speedUHC.score,
+                },
+                {
+                    name: "Wins",
+                    value:
+                        lastStat.stats.speedUHC.wins -
+                        firstStat.stats.speedUHC.wins,
+                },
+                {
+                    name: "Kills",
+                    value:
+                        lastStat.stats.speedUHC.kills -
+                        firstStat.stats.speedUHC.kills,
+                },
+            ],
+        },
+        {
+            name: "Turbo Kart Racers",
+            thumbnail: "./files/Turbo_Kart_Racers.png",
+            stats: [
+                {
+                    name: "Trophies",
+                    value:
+                        lastStat.stats.turboKartRacers.trophies -
+                        firstStat.stats.turboKartRacers.trophies,
+                },
+                {
+                    name: "Wins",
+                    value:
+                        lastStat.stats.turboKartRacers.wins -
+                        firstStat.stats.turboKartRacers.wins,
+                },
+            ],
+        },
+        {
+            name: "The TNT Games",
+            thumbnail: "./files/The_TNT_Games.png",
+            stats: [
+                {
+                    name: "Wins",
+                    value:
+                        lastStat.stats.tntGames.wins -
+                        firstStat.stats.tntGames.wins,
+                },
+                {
+                    name: "Kills",
+                    value:
+                        lastStat.stats.tntGames.kills -
+                        firstStat.stats.tntGames.kills,
+                },
+            ],
+        },
+        {
+            name: "UHC Champions",
+            thumbnail: "./files/UHC_Champions.png",
+            stats: [
+                {
+                    name: "Score",
+                    value: lastStat.stats.uhc.score - firstStat.stats.uhc.score,
+                },
+                {
+                    name: "Wins",
+                    value: lastStat.stats.uhc.wins - firstStat.stats.uhc.wins,
+                },
+                {
+                    name: "Kills",
+                    value: lastStat.stats.uhc.kills - firstStat.stats.uhc.kills,
+                },
+            ],
+        },
+        {
+            name: "VampireZ",
+            thumbnail: "./files/VampireZ.png",
+            stats: [
+                {
+                    name: "Wins",
+                    value:
+                        lastStat.stats.vampireZ.wins -
+                        firstStat.stats.vampireZ.wins,
+                },
+                {
+                    name: "Kills",
+                    value:
+                        lastStat.stats.vampireZ.kills -
+                        firstStat.stats.vampireZ.kills,
+                },
+            ],
+        },
+        {
+            name: "The Walls",
+            thumbnail: "./files/The_Walls.png",
+            stats: [
+                {
+                    name: "Wins",
+                    value:
+                        lastStat.stats.theWalls.wins -
+                        firstStat.stats.theWalls.wins,
+                },
+                {
+                    name: "Kills",
+                    value:
+                        lastStat.stats.theWalls.kills -
+                        firstStat.stats.theWalls.kills,
+                },
+            ],
+        },
+        {
+            name: "Warlords",
+            thumbnail: "./files/Warlords.png",
+            stats: [
+                {
+                    name: "Wins",
+                    value:
+                        lastStat.stats.warlords.wins -
+                        firstStat.stats.warlords.wins,
+                },
+                {
+                    name: "Kills",
+                    value:
+                        lastStat.stats.warlords.kills -
+                        firstStat.stats.warlords.kills,
+                },
+            ],
+        },
+        {
+            name: "Wool Games",
+            thumbnail: "./files/Wool_Games.png",
+            stats: [
+                {
+                    name: "Experience",
+                    value:
+                        lastStat.stats.woolGames.experience -
+                        firstStat.stats.woolGames.experience,
+                },
+                {
+                    name: "Wins",
+                    value:
+                        lastStat.stats.woolGames.wins -
+                        firstStat.stats.woolGames.wins,
+                },
+                {
+                    name: "Kills",
+                    value:
+                        lastStat.stats.woolGames.kills -
+                        firstStat.stats.woolGames.kills,
+                },
+            ],
+        },
+    ];
+    return stats;
 }
 
 type guildStat = Prisma.Result<

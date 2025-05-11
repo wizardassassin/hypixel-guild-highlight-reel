@@ -4,6 +4,7 @@ import {
     EmbedBuilder,
     escapeMarkdown,
     InteractionContextType,
+    MessageFlags,
     SlashCommandBuilder,
 } from "discord.js";
 import { PlayerEndpointType } from "../query/hypixel-fetcher.js";
@@ -84,7 +85,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         data.PlayerStats[0],
         data.PlayerStats[1]
     );
-    const message = await createStatsEmbed({
+    const messages = await createStatsEmbed({
         username: data.username,
         uuid: data.uuid,
         prefix: data.prefix,
@@ -92,5 +93,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         startDate: data.PlayerStats[0].createdAt,
         stopDate: data.PlayerStats[1].createdAt,
     });
-    await interaction.reply(message);
+    await interaction.reply({
+        flags: MessageFlags.IsComponentsV2,
+        ...messages[0],
+    });
+    for (const message of messages) {
+        await interaction.channel.send({
+            flags: MessageFlags.IsComponentsV2,
+            ...message,
+        });
+    }
 }

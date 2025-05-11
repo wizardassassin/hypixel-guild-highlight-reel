@@ -1,8 +1,11 @@
 import {
     AttachmentBuilder,
     ChatInputCommandInteraction,
+    ComponentType,
     EmbedBuilder,
     InteractionContextType,
+    MessageFlags,
+    SectionBuilder,
     SlashCommandBuilder,
 } from "discord.js";
 import { DateTime } from "luxon";
@@ -48,12 +51,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         dateYesterday,
         dateToday,
         "Custom Guild Highlight",
-        (content) =>
+        (message) =>
             interaction
                 .reply({
-                    content: content,
+                    flags: MessageFlags.IsComponentsV2,
+                    ...message,
                     withResponse: true,
                 })
-                .then((x) => x.resource.message)
+                .then((x) => x.resource.message),
+        interaction.guild.iconURL()
     );
 }

@@ -1,4 +1,9 @@
-import { Client } from "discord.js";
+import {
+    Client,
+    ComponentType,
+    MessageFlags,
+    SectionBuilder,
+} from "discord.js";
 import { DateTime } from "luxon";
 import { createGuildHighlight } from "./recap-format.js";
 
@@ -33,7 +38,12 @@ export async function createHighlights(client: Client<true>) {
             dateToday.minus({ weeks: 1 }),
             dateToday,
             "Weekly Guild Highlight",
-            (content) => client.instanceChannel.send(content)
+            (message) =>
+                client.instanceChannel.send({
+                    flags: MessageFlags.IsComponentsV2,
+                    ...message,
+                }),
+            client.instanceChannel.guild.iconURL()
         );
     }
     if (isStartOfMonth(dateObj)) {
@@ -42,7 +52,12 @@ export async function createHighlights(client: Client<true>) {
             dateToday.minus({ months: 1 }),
             dateToday,
             "Monthly Guild Highlight",
-            (content) => client.instanceChannel.send(content)
+            (message) =>
+                client.instanceChannel.send({
+                    flags: MessageFlags.IsComponentsV2,
+                    ...message,
+                }),
+            client.instanceChannel.guild.iconURL()
         );
     }
     if (isStartOfYear(dateObj)) {
@@ -51,7 +66,12 @@ export async function createHighlights(client: Client<true>) {
             dateToday.minus({ years: 1 }),
             dateToday,
             "Yearly Guild Highlight",
-            (content) => client.instanceChannel.send(content)
+            (message) =>
+                client.instanceChannel.send({
+                    flags: MessageFlags.IsComponentsV2,
+                    ...message,
+                }),
+            client.instanceChannel.guild.iconURL()
         );
     }
 }

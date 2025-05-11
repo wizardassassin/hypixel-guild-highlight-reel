@@ -1,8 +1,11 @@
 import {
     ChatInputCommandInteraction,
+    ComponentType,
     GuildMember,
     InteractionContextType,
+    MessageFlags,
     PermissionsBitField,
+    SectionBuilder,
     SlashCommandBuilder,
 } from "discord.js";
 import { DateTime } from "luxon";
@@ -70,7 +73,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         startParsed,
         endParsed,
         title,
-        (content) => interaction.client.instanceChannel.send(content)
+        (message) =>
+            interaction.client.instanceChannel.send({
+                flags: MessageFlags.IsComponentsV2,
+                ...message,
+            }),
+        interaction.channel.guild.iconURL()
     );
 
     interaction.editReply("Creating guild highlight...Done!");
