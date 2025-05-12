@@ -26,7 +26,7 @@ import { DateTime } from "luxon";
 import { MojangFetcher } from "./query/skin-fetcher.js";
 import assert from "assert/strict";
 
-function getSplashText(prevText?: string) {
+function getRandomText(prevText?: string) {
     const splashTexts = [
         "Hello World!",
         "<script>alert(1);</script>",
@@ -48,7 +48,7 @@ function getSplashText(prevText?: string) {
     );
 }
 
-function getEmbedColor(prevColor?: number) {
+function getRandomColor(prevColor?: number) {
     const colors = [
         Colors.Default,
         Colors.White,
@@ -88,6 +88,7 @@ type statsEmbedDataType = {
     username: string;
     uuid: string;
     prefix: string;
+    color: number;
     diff: ReturnType<typeof diffPlayerStats>;
     startDate: Date;
     stopDate: Date;
@@ -122,7 +123,7 @@ export async function createStatsEmbed(data: statsEmbedDataType) {
         },
     });
 
-    const color = getEmbedColor();
+    const color = data.color;
 
     const messages: BaseMessageOptions[] = [
         {
@@ -262,6 +263,7 @@ export async function createGuildHighlight(
             username: x.username,
             uuid: x.uuid,
             prefix: x.prefix,
+            color: x.color,
             diff: diffPlayerStats(x.PlayerStats[0], x.PlayerStats[1]),
             startDate: x.PlayerStats[0].createdAt,
             stopDate: x.PlayerStats[1].createdAt,
@@ -306,7 +308,7 @@ export async function createGuildHighlight(
         .reduce((a, b) => a + b, 0);
     const numberFormat1 = new Intl.NumberFormat("en-US", {});
     let content = `# __${highlightName}__\n`;
-    content += `-# ${getSplashText()}\n`;
+    content += `-# ${getRandomText()}\n`;
     content += `## __Overall Stats__\n`;
     content += `    ⫸ **${totalExp}** Guild Experience Gained\n\n`;
     content += `    ⫸ **${totalWins}** Total Wins\n\n`;

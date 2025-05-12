@@ -119,12 +119,14 @@ export async function updateGuild(
                     uuid: uuid,
                     username: playerMap.get(uuid).username,
                     prefix: playerMap.get(uuid).prefix,
+                    color: playerMap.get(uuid).color,
                     initialJoined: new Date(memberMap.get(uuid).joined),
                     joined: new Date(memberMap.get(uuid).joined),
                 },
                 update: {
                     username: playerMap.get(uuid).username,
                     prefix: playerMap.get(uuid).prefix,
+                    color: playerMap.get(uuid).color,
                     joined: new Date(memberMap.get(uuid).joined),
                 },
                 include: {

@@ -89,6 +89,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         username: data.username,
         uuid: data.uuid,
         prefix: data.prefix,
+        color: data.color,
         diff: playerData,
         startDate: data.PlayerStats[0].createdAt,
         stopDate: data.PlayerStats[1].createdAt,

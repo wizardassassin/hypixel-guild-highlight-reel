@@ -35,6 +35,7 @@ model Player {
   uuid          String        @unique
   username      String
   prefix        String
+  color         Int
   joined        DateTime
   initialJoined DateTime
   PlayerStats   PlayerStats[]

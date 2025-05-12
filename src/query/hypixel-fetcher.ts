@@ -605,15 +605,47 @@ export function parsePlayerEndpointData(json: any) {
         uuid: String(player.uuid),
         username: String(player.displayname),
         prefix: getPlayerPrefix(player),
+        color: getPlayerColor(player),
         playerStats,
         json,
     };
 }
 
+const colorMap = new Map([
+    ["black", 0x000000],
+    ["dark_blue", 0x0000aa],
+    ["dark_green", 0x00aa00],
+    ["dark_aqua", 0x00aaaa],
+    ["dark_red", 0xaa0000],
+    ["dark_purple", 0xaa00aa],
+    ["gold", 0xffaa00],
+    ["gray", 0xaaaaaa],
+    ["dark_gray", 0x555555],
+    ["blue", 0x5555ff],
+    ["green", 0x55ff55],
+    ["aqua", 0x55ffff],
+    ["red", 0xff5555],
+    ["light_purple", 0xff55ff],
+    ["yellow", 0xffff55],
+    ["white", 0xffffff],
+    ["minecoin_gold", 0xddd605],
+    ["material_quartz", 0xe3d4d1],
+    ["material_iron", 0xcecaca],
+    ["material_netherite", 0x443a3b],
+    ["material_redstone", 0x971607],
+    ["material_copper", 0xb4684d],
+    ["material_gold", 0xdeb12d],
+    ["material_emerald", 0x47a036],
+    ["material_diamond", 0x2cbaa8],
+    ["material_lapis", 0x21497b],
+    ["material_amethyst", 0x9a5cc6],
+]);
+
 function getPlayerPrefix(player: any) {
     if (player.prefix) return (player.prefix as string).replace(/§./g, "");
-    if (player.rank === "ADMIN") return "[ADMIN]";
-    if (player.rank === "GAME_MASTER") return "[GM]";
+    if (player.rank === "STAFF") return "[STAFF]";
+    // if (player.rank === "ADMIN") return "[ADMIN]";
+    // if (player.rank === "GAME_MASTER") return "[GM]";
     if (player.rank === "YOUTUBER") return "[YOUTUBE]";
     if (player.monthlyPackageRank === "SUPERSTAR") return "[MVP++]";
     if (player.newPackageRank === "VIP") return "[VIP]";
@@ -625,6 +657,25 @@ function getPlayerPrefix(player: any) {
     if (player.packageRank === "MVP") return "[MVP]";
     if (player.packageRank === "MVP_PLUS") return "[MVP+]";
     return "";
+}
+
+function getPlayerColor(player: any) {
+    const prefix = getPlayerPrefix(player);
+    if (!prefix) return 0xaaaaaa;
+    if (prefix.includes("STAFF") || prefix.includes("ADMIN")) return 0xff5555;
+    if (prefix.includes("YOUTUBE")) return 0xff5555;
+    if (!prefix.includes("MVP") && !prefix.includes("VIP")) return 0xff5555;
+    if (player.rankPlusColor) {
+        const plusColor = String(player.rankPlusColor).toLowerCase();
+        return colorMap.get(plusColor) ?? 0xff5555;
+    }
+    if (prefix.includes("MVP++")) {
+        if (!player.monthlyRankColor) return 0xffaa00;
+        const rankColor = String(player.monthlyRankColor).toLowerCase();
+        return colorMap.get(rankColor) ?? 0xffaa00;
+    }
+    if (prefix.includes("MVP")) return 0x55ffff;
+    if (prefix.includes("VIP")) return 0x55ff55;
 }
 
 // https://hypixel.net/threads/bedwars-level-experience-guide-2023-updated-version.5431988/
