@@ -12,19 +12,17 @@ export const data = new SlashCommandBuilder()
     .setContexts(InteractionContextType.Guild);
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-    const data = await interaction.client.db.guildStats.findMany({
-        select: {
+    const data = await interaction.client.db.query.guildStats.findMany({
+        columns: {
             createdAt: true,
         },
-        orderBy: {
-            createdAt: "asc",
-        },
+        orderBy: (guildStats, { asc }) => asc(guildStats.createdAt),
     });
     if (data.length === 0) {
         await interaction.reply("The bot currently has no data.");
         return;
     }
-    const data2 = data.map((x) => x.createdAt);
+    const data2 = data.map((x) => new Date(x.createdAt));
 
     const firstDate = data2.at(0);
     const lastDate = data2.at(-1);

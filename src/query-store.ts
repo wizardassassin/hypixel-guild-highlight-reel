@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import { getGuildData, updateGuild } from "./db/db-update.js";
 import { sleep } from "./utils/utils.js";
-import prisma from "./db/db.js";
+import db from "./db/db.js";
 import { DateTime } from "luxon";
 import assert from "assert/strict";
 import { setBlob } from "./db/blob-util.js";
@@ -18,10 +18,8 @@ async function dailyCron() {
     );
     const housingStore: Parameters<typeof getGuildData>[2] = [];
     try {
-        const guild = await prisma.guild.findUnique({
-            where: {
-                guildIdDiscord: guildId,
-            },
+        const guild = await db.query.guild.findFirst({
+            where: (guild, { eq }) => eq(guild.guildIdDiscord, guildId),
         });
         const guildData = await getGuildData(
             guild.guildIdHypixel,

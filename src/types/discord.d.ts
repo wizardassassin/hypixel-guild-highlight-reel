@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import db from "../db/db.ts";
 import "discord.js";
 
 import {
@@ -23,6 +23,6 @@ declare module "discord.js" {
         commands: Collection<string, GenericCommandModule>;
         instanceChannel: TextChannel;
         cronIsRunning: boolean;
-        db: PrismaClient;
+        db: typeof db;
     }
 }

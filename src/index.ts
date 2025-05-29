@@ -14,7 +14,7 @@ import {
     TextChannel,
 } from "discord.js";
 import { GenericCommandModule } from "./types/discord.js";
-import prisma from "./db/db.js";
+import db from "./db/db.js";
 import { initCron } from "./query-store.js";
 import { onCron } from "./query-informer.js";
 
@@ -33,7 +33,7 @@ const client = new Client({
 });
 
 client.commands = new Collection<string, GenericCommandModule>();
-client.db = prisma;
+client.db = db;
 
 const cwd = import.meta.dirname;
 

@@ -1,5 +1,5 @@
 import { DateTime } from "luxon";
-import prisma from "../db/db.js";
+import db from "../db/db.js";
 import fs from "fs/promises";
 import crypto from "crypto";
 import zlib from "zlib";
@@ -16,10 +16,8 @@ import { sleep } from "../utils/utils.js";
 
 const guildId = process.env.DISCORD_GUILD_ID;
 
-const guild = await prisma.guild.findUnique({
-    where: {
-        guildIdDiscord: guildId,
-    },
+const guild = await db.query.guild.findFirst({
+    where: (guild, { eq }) => eq(guild.guildIdDiscord, guildId),
 });
 async function seedFile(filename: string) {
     console.log("Seeding:", filename);
@@ -47,7 +45,7 @@ async function seedFile(filename: string) {
     console.timeEnd("Decompress");
     await updateGuild(guild.id, manualData, dateObj, rawHash);
 }
-const stats = await prisma.guildStats.findMany();
+const stats = await db.query.guildStats.findMany();
 const hashes = stats.map((x) => x.rawDataHash);
 const files = (await fs.readdir("./blob/"))
     .filter((x) => !x.startsWith(".") && x.length === 78)
