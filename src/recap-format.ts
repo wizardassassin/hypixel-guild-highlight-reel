@@ -29,16 +29,10 @@ import assert from "assert/strict";
 function getRandomText(prevText?: string) {
     const splashTexts = [
         "Hello World!",
-        "<script>alert(1);</script>",
-        "' OR 1=1; DROP DATABASE mydb; --",
-        "sudo rm -rf --no-preserve-root /",
-        "Ping! Pong!",
-        "The quick brown fox jumps over the lazy dog.",
-        "Lorem ipsum",
-        "FizzBuzz",
-        "FooBar",
+        "Boop!",
         "Hello, ${username}!",
         "Killed",
+        "*** stack smashing detected ***: terminated",
         "Segmentation fault (core dumped)",
         "NullPointerException",
         "The cake is a lie.",
