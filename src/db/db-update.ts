@@ -234,8 +234,8 @@ export async function updateGuild(
                 guildId: guildIdInternal,
                 createdAt: dateToday.getTime(),
                 experience: data.guildData.exp,
-                experienceByGameType: Buffer.from(
-                    JSON.stringify(data.guildData.guildExpByGameType)
+                experienceByGameType: JSON.stringify(
+                    data.guildData.guildExpByGameType
                 ),
                 rawDataHash: rawHash,
             })
@@ -246,7 +246,7 @@ export async function updateGuild(
             playerData.map((x) => ({
                 playerId: x.id,
                 createdAt: dateToday.getTime(),
-                playerStats: Buffer.from(JSON.stringify(x.playerStats)),
+                playerStats: JSON.stringify(x.playerStats),
                 skyblockExperience: x.skyblockExperience,
                 housingCookies: x.housingCookies,
                 experience: x.experience,

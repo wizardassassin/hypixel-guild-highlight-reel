@@ -207,7 +207,7 @@ const decoder = new TextDecoder();
 export const parsePlayerStat = (stat: playerStat) => ({
     createdAt: new Date(stat.createdAt),
     stats: {
-        ...(JSON.parse(decoder.decode(stat.playerStats)) as PlayerStatsType),
+        ...(JSON.parse(stat.playerStats) as PlayerStatsType),
         experience: stat.experience,
         questParticipation: stat.questParticipation,
         skyblockExperience: stat.skyblockExperience,

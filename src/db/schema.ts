@@ -21,7 +21,7 @@ export const playerStats = sqliteTable(
         createdAt: numeric({ mode: "number" })
             .default(sql`(CURRENT_TIMESTAMP)`)
             .notNull(),
-        playerStats: blob({ mode: "buffer" }).notNull(),
+        playerStats: text().notNull(),
         experience: integer().notNull(),
         questParticipation: integer().notNull(),
         skyblockExperience: integer().notNull(),
@@ -59,7 +59,7 @@ export const guildStats = sqliteTable(
             .default(sql`(CURRENT_TIMESTAMP)`)
             .notNull(),
         experience: integer().notNull(),
-        experienceByGameType: blob({ mode: "buffer" }).notNull(),
+        experienceByGameType: text().notNull(),
         guildId: text()
             .notNull()
             .references(() => guild.id, {
