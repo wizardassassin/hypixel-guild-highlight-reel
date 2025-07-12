@@ -153,7 +153,7 @@ export async function queryPlayerDataLoose(
             },
         });
         const playerStop = await tx.query.player.findFirst({
-            where: (playerStats, { eq }) => eq(playerStats.id, playerStats.id),
+            where: (player, { eq }) => eq(player.uuid, uuid),
             columns: {
                 id: true,
             },

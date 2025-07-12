@@ -148,7 +148,7 @@ export async function updateGuild(
             with: {
                 playerStats: {
                     where: (playerStats, { lte }) =>
-                        lte(playerStats.createdAt, dateSunday.getTime()),
+                        lte(playerStats.createdAt, dateYesterday.getTime()),
                     orderBy: (playerStats, { desc }) =>
                         desc(playerStats.createdAt),
                     columns: {
@@ -170,7 +170,7 @@ export async function updateGuild(
         with: {
             playerStats: {
                 where: (playerStats, { lte }) =>
-                    lte(playerStats.createdAt, dateYesterday.getTime()),
+                    lte(playerStats.createdAt, dateSunday.getTime()),
                 orderBy: (playerStats, { desc }) => desc(playerStats.createdAt),
                 columns: {
                     housingCookies: true,
