@@ -233,8 +233,8 @@ export async function createGuildHighlight(
     );
 
     if (
-        data.guild.GuildStats.length !== 2 ||
-        data.guild.GuildStats[0].id === data.guild.GuildStats[1].id
+        data.guild.guildStats.length !== 2 ||
+        data.guild.guildStats[0].id === data.guild.guildStats[1].id
     ) {
         const dYest = dateYesterday.toFormat("MM/dd/yy");
         const dToday = dateToday.toFormat("MM/dd/yy");
@@ -243,24 +243,30 @@ export async function createGuildHighlight(
         });
         return;
     }
-    dateYesterday = DateTime.fromJSDate(data.guild.GuildStats[0].createdAt, {
-        zone: "America/New_York",
-    });
-    dateToday = DateTime.fromJSDate(data.guild.GuildStats[1].createdAt, {
-        zone: "America/New_York",
-    });
+    dateYesterday = DateTime.fromJSDate(
+        new Date(data.guild.guildStats[0].createdAt),
+        {
+            zone: "America/New_York",
+        }
+    );
+    dateToday = DateTime.fromJSDate(
+        new Date(data.guild.guildStats[1].createdAt),
+        {
+            zone: "America/New_York",
+        }
+    );
     const dYest = dateYesterday.toFormat("MM/dd/yy");
     const dToday = dateToday.toFormat("MM/dd/yy");
     const guildData = data.players
-        .filter((x) => x.PlayerStats.length >= 2)
+        .filter((x) => x.playerStats.length >= 2)
         .map((x) => ({
             username: x.username,
             uuid: x.uuid,
             prefix: x.prefix,
             color: x.color,
-            diff: diffPlayerStats(x.PlayerStats[0], x.PlayerStats[1]),
-            startDate: x.PlayerStats[0].createdAt,
-            stopDate: x.PlayerStats[1].createdAt,
+            diff: diffPlayerStats(x.playerStats[0], x.playerStats[1]),
+            startDate: new Date(x.playerStats[0].createdAt),
+            stopDate: new Date(x.playerStats[1].createdAt),
         }))
         .filter((x) =>
             x.diff
@@ -280,8 +286,8 @@ export async function createGuildHighlight(
                     .find((x) => x.name === "Guild Experience")?.value ?? 0)
         );
     const totalExp =
-        data.guild.GuildStats[1].experience -
-        data.guild.GuildStats[0].experience;
+        data.guild.guildStats[1].experience -
+        data.guild.guildStats[0].experience;
     const totalKills = guildData
         .map((x) =>
             x.diff

@@ -12,6 +12,7 @@ import { JSDOM } from "jsdom";
 import * as d3 from "d3";
 import { DateTime } from "luxon";
 import { MojangFetcher } from "../query/skin-fetcher.js";
+import { playerStats } from "../db/schema.js";
 
 export const data = new SlashCommandBuilder()
     .setName("visualize")
@@ -76,23 +77,20 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         return;
     }
     await interaction.deferReply();
-    const data = await interaction.client.db.player.findUnique({
-        where: {
-            uuid: uuid,
-        },
-        include: {
-            PlayerStats: {
-                where: {
-                    createdAt: {
-                        ...(startParsed.isValid && {
-                            gte: startParsed.toJSDate(),
-                        }),
-                        ...(endParsed.isValid && { lte: endParsed.toJSDate() }),
-                    },
-                },
-                orderBy: {
-                    createdAt: "asc",
-                },
+    const data = await interaction.client.db.query.player.findFirst({
+        where: (player, { eq }) => eq(player.uuid, uuid),
+        with: {
+            playerStats: {
+                where: (playerStats, { and, or, gte, lte, eq }) =>
+                    and(
+                        startParsed.isValid
+                            ? gte(playerStats.createdAt, startParsed.toMillis())
+                            : eq(playerStats.id, playerStats.id),
+                        endParsed.isValid
+                            ? lte(playerStats.createdAt, endParsed.toMillis())
+                            : eq(playerStats.id, playerStats.id)
+                    ),
+                orderBy: (playerStats, { asc }) => asc(playerStats.createdAt),
             },
         },
     });
@@ -100,16 +98,16 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const dateToday = dateObj.startOf("day");
     const dateOneMonth = dateToday.minus({ months: 1 });
     // week aligned
-    if (data?.PlayerStats) {
-        data.PlayerStats = data?.PlayerStats.filter((x) => {
+    if (data?.playerStats) {
+        data.playerStats = data?.playerStats.filter((x) => {
             const isSunday =
-                DateTime.fromJSDate(x.createdAt, {
+                DateTime.fromJSDate(new Date(x.createdAt), {
                     zone: "America/New_York",
                 }).weekday === 7;
             return isSunday;
         });
     }
-    if (!data || (data?.PlayerStats?.length ?? 0) === 0) {
+    if (!data || (data?.playerStats?.length ?? 0) === 0) {
         await interaction.editReply(
             "No data was found for " + escapeMarkdown(username2)
         );
@@ -134,10 +132,12 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         );
         return;
     }
-    const data3 = data.PlayerStats.map((x) => parsePlayerStat(x)).map((x) => ({
-        time: x.createdAt,
-        value: statGetter.getStat(x),
-    }));
+    const data3 = data.playerStats
+        .map((x) => parsePlayerStat(x))
+        .map((x) => ({
+            time: x.createdAt,
+            value: statGetter.getStat(x),
+        }));
     const derivH = Math.abs(interaction.options.getInteger("derivative") ?? 0);
     const data2: typeof data3 = [];
     if (derivH === 0) {

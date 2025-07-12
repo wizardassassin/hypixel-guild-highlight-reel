@@ -51,23 +51,19 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
     const dateObj = DateTime.now().setZone("America/New_York");
     const dateToday = dateObj.startOf("day");
-
     const guildId = process.env.DISCORD_GUILD_ID;
-    const guild = await interaction.client.db.guild.findUnique({
-        where: {
-            guildIdDiscord: guildId,
-        },
-        include: {
-            GuildStats: {
-                where: {
-                    createdAt: dateToday.toJSDate(),
-                },
-                take: 1,
+    const guild = await interaction.client.db.query.guild.findFirst({
+        where: (guild, { eq }) => eq(guild.guildIdDiscord, guildId),
+        with: {
+            guildStats: {
+                where: (guildStats, { eq }) =>
+                    eq(guildStats.createdAt, dateToday.toMillis()),
+                limit: 1,
             },
         },
     });
 
-    if (guild.GuildStats?.length !== 0) {
+    if (guild.guildStats?.length !== 0) {
         await interaction.reply("Guild stats entry already exists.");
         return;
     }
@@ -75,7 +71,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const cookieCache = await getBlob("cookie_cache");
 
     const canUseCache =
-        Date.now() - cookieCache?.createdAt.getTime() < 1000 * 60 * 60 * 24;
+        Date.now() - new Date(cookieCache?.createdAt).getTime() <
+        1000 * 60 * 60 * 24;
 
     if (useCache && !canUseCache) {
         await interaction.reply("Cookie Cache is not available.");

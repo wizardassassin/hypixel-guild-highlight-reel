@@ -1,7 +1,8 @@
-import prisma from "../db/db.js";
+import db from "../db/db.js";
+import { blobStorage, guild, player } from "../db/schema.js";
 
-await prisma.$transaction([
-    prisma.blobStorage.deleteMany(),
-    prisma.player.deleteMany(),
-    prisma.guild.deleteMany(),
-]);
+await db.transaction(async (tx) => {
+    await tx.delete(blobStorage);
+    await tx.delete(player);
+    await tx.delete(guild);
+});

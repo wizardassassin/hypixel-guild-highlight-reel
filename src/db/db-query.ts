@@ -1,5 +1,4 @@
-import { Prisma } from "@prisma/client";
-import prisma from "./db.js";
+import db from "./db.js";
 import {
     PlayerEndpointType,
     PlayerStatsType,
@@ -11,82 +10,73 @@ export async function queryGuildDataLoose(
     stopDate: Date
 ) {
     const [guildStart, guildStop, playersStart, playersStop] =
-        await prisma.$transaction([
-            prisma.guild.findUnique({
-                where: {
-                    guildIdDiscord: guildId,
-                },
-                include: {
-                    GuildStats: {
-                        where: {
-                            createdAt: {
-                                gte: startDate,
-                            },
-                        },
-                        orderBy: {
-                            createdAt: "asc",
-                        },
-                        take: 1,
+        await db.transaction(async (tx) => {
+            const guildStart = await tx.query.guild.findFirst({
+                where: (guild, { eq }) => eq(guild.guildIdDiscord, guildId),
+                with: {
+                    guildStats: {
+                        where: (guildStats, { gte }) =>
+                            gte(guildStats.createdAt, startDate.getTime()),
+                        orderBy: (guildStats, { asc }) =>
+                            asc(guildStats.createdAt),
+                        limit: 1,
                     },
                 },
-            }),
-            prisma.guild.findUnique({
-                where: {
-                    guildIdDiscord: guildId,
-                },
-                select: {
-                    GuildStats: {
-                        where: {
-                            createdAt: {
-                                lte: stopDate,
-                            },
-                        },
-                        orderBy: {
-                            createdAt: "desc",
-                        },
-                        take: 1,
-                    },
-                },
-            }),
-            prisma.player.findMany({
-                include: {
-                    PlayerStats: {
-                        where: {
-                            createdAt: {
-                                gte: startDate,
-                            },
-                        },
-                        orderBy: {
-                            createdAt: "asc",
-                        },
-                        take: 1,
-                    },
-                },
-            }),
-            prisma.player.findMany({
-                select: {
+            });
+            const guildStop = await tx.query.guild.findFirst({
+                where: (guild, { eq }) => eq(guild.guildIdDiscord, guildId),
+                columns: {
                     id: true,
-                    PlayerStats: {
-                        where: {
-                            createdAt: {
-                                lte: stopDate,
-                            },
-                        },
-                        orderBy: {
-                            createdAt: "desc",
-                        },
-                        take: 1,
+                },
+                with: {
+                    guildStats: {
+                        where: (guildStats, { lte }) =>
+                            lte(guildStats.createdAt, stopDate.getTime()),
+                        orderBy: (guildStats, { desc }) =>
+                            desc(guildStats.createdAt),
+                        limit: 1,
                     },
                 },
-            }),
-        ]);
-    if (guildStop?.GuildStats?.length >= 1) {
-        guildStart.GuildStats.push(guildStop.GuildStats[0]);
+            });
+            const playersStart = await tx.query.player.findMany({
+                where: (playerStats, { eq }) =>
+                    eq(playerStats.id, playerStats.id),
+                with: {
+                    playerStats: {
+                        where: (playerStats, { gte }) =>
+                            gte(playerStats.createdAt, startDate.getTime()),
+                        orderBy: (playerStats, { asc }) =>
+                            asc(playerStats.createdAt),
+                        limit: 1,
+                    },
+                },
+            });
+            const playersStop = await tx.query.player.findMany({
+                where: (playerStats, { eq }) =>
+                    eq(playerStats.id, playerStats.id),
+                columns: {
+                    id: true,
+                },
+                with: {
+                    playerStats: {
+                        where: (playerStats, { lte }) =>
+                            lte(playerStats.createdAt, stopDate.getTime()),
+                        orderBy: (playerStats, { desc }) =>
+                            desc(playerStats.createdAt),
+                        limit: 1,
+                    },
+                },
+            });
+            return [guildStart, guildStop, playersStart, playersStop];
+        });
+
+    if (guildStop?.guildStats?.length >= 1) {
+        guildStart.guildStats.push(guildStop.guildStats[0]);
     }
     for (const playerStart of playersStart) {
         const playerStop = playersStop.find((x) => x.id === playerStart.id);
-        if (playerStop?.PlayerStats?.length >= 1) {
-            playerStart.PlayerStats.push(playerStop.PlayerStats[0]);
+        if (playerStop?.playerStats?.length >= 1) {
+            playerStart.playerStats.push(playerStop.playerStats[0]);
         }
     }
     return {
@@ -100,28 +90,19 @@ export async function queryGuildData(
     startDate: Date,
     stopDate: Date
 ) {
-    const data1 = await prisma.guild.findUnique({
-        where: {
-            guildIdDiscord: guildId,
-        },
-        include: {
-            GuildStats: {
-                where: {
-                    OR: [
-                        {
-                            createdAt: startDate,
-                        },
-                        {
-                            createdAt: stopDate,
-                        },
-                    ],
-                },
-                orderBy: {
-                    createdAt: "asc",
-                },
-                include: {
-                    members: {
-                        include: {
+    const data1 = await db.query.guild.findFirst({
+        where: (guild, { eq }) => eq(guild.guildIdDiscord, guildId),
+        with: {
+            guildStats: {
+                where: (guildStats, { eq, or }) =>
+                    or(
+                        eq(guildStats.createdAt, startDate.getTime()),
+                        eq(guildStats.createdAt, stopDate.getTime())
+                    ),
+                orderBy: (guildStats, { asc }) => asc(guildStats.createdAt),
+                with: {
+                    playerStats: {
+                        with: {
                             player: true,
                         },
                     },
@@ -137,25 +118,16 @@ export async function queryGuildDataOnly(
     startDate: Date,
     stopDate: Date
 ) {
-    const data1 = await prisma.guild.findUnique({
-        where: {
-            guildIdDiscord: guildId,
-        },
-        include: {
-            GuildStats: {
-                where: {
-                    OR: [
-                        {
-                            createdAt: startDate,
-                        },
-                        {
-                            createdAt: stopDate,
-                        },
-                    ],
-                },
-                orderBy: {
-                    createdAt: "asc",
-                },
+    const data1 = await db.query.guild.findFirst({
+        where: (guild, { eq }) => eq(guild.guildIdDiscord, guildId),
+        with: {
+            guildStats: {
+                where: (guildStats, { eq, or }) =>
+                    or(
+                        eq(guildStats.createdAt, startDate.getTime()),
+                        eq(guildStats.createdAt, stopDate.getTime())
+                    ),
+                orderBy: (guildStats, { asc }) => asc(guildStats.createdAt),
             },
         },
     });
@@ -167,47 +139,38 @@ export async function queryPlayerDataLoose(
     startDate: Date,
     stopDate: Date
 ) {
-    const [playerStart, playerStop] = await prisma.$transaction([
-        prisma.player.findUnique({
-            where: {
-                uuid: uuid,
-            },
-            include: {
-                PlayerStats: {
-                    where: {
-                        createdAt: {
-                            gte: startDate,
-                        },
-                    },
-                    orderBy: {
-                        createdAt: "asc",
-                    },
-                    take: 1,
+    const [playerStart, playerStop] = await db.transaction(async (tx) => {
+        const playerStart = await tx.query.player.findFirst({
+            where: (player, { eq }) => eq(player.uuid, uuid),
+            with: {
+                playerStats: {
+                    where: (playerStats, { gte }) =>
+                        gte(playerStats.createdAt, startDate.getTime()),
+                    orderBy: (playerStats, { asc }) =>
+                        asc(playerStats.createdAt),
+                    limit: 1,
                 },
             },
-        }),
-        prisma.player.findUnique({
-            where: {
-                uuid: uuid,
-            },
-            select: {
+        });
+        const playerStop = await tx.query.player.findFirst({
+            where: (player, { eq }) => eq(player.uuid, uuid),
+            columns: {
                 id: true,
-                PlayerStats: {
-                    where: {
-                        createdAt: {
-                            lte: stopDate,
-                        },
-                    },
-                    orderBy: {
-                        createdAt: "desc",
-                    },
-                    take: 1,
+            },
+            with: {
+                playerStats: {
+                    where: (playerStats, { lte }) =>
+                        lte(playerStats.createdAt, stopDate.getTime()),
+                    orderBy: (playerStats, { desc }) =>
+                        desc(playerStats.createdAt),
+                    limit: 1,
                 },
             },
-        }),
-    ]);
-    if (playerStop?.PlayerStats?.length >= 1) {
-        playerStart.PlayerStats.push(playerStop.PlayerStats[0]);
+        });
+        return [playerStart, playerStop];
+    });
+    if (playerStop?.playerStats?.length >= 1) {
+        playerStart.playerStats.push(playerStop.playerStats[0]);
     }
     return playerStart;
 }
@@ -217,45 +180,34 @@ export async function queryPlayerData(
     startDate: Date,
     stopDate: Date
 ) {
-    const data1 = await prisma.player.findUnique({
-        where: {
-            uuid: uuid,
-        },
-        include: {
-            PlayerStats: {
-                where: {
-                    OR: [
-                        {
-                            createdAt: startDate,
-                        },
-                        {
-                            createdAt: stopDate,
-                        },
-                    ],
-                },
-                orderBy: {
-                    createdAt: "asc",
-                },
+    const data1 = await db.query.player.findFirst({
+        where: (player, { eq }) => eq(player.uuid, uuid),
+        with: {
+            playerStats: {
+                where: (playerStats, { eq, or }) =>
+                    or(
+                        eq(playerStats.createdAt, startDate.getTime()),
+                        eq(playerStats.createdAt, stopDate.getTime())
+                    ),
+                orderBy: (playerStats, { asc }) => asc(playerStats.createdAt),
             },
         },
     });
     return data1;
 }
 
-type playerStat = Prisma.Result<
-    typeof prisma.playerStats,
-    Prisma.Args<typeof prisma.playerStats, "findUnique">,
-    "findUnique"
->;
+type playerStat = Awaited<
+    ReturnType<typeof queryPlayerData>
+>["playerStats"][number];
 
 type parsedPlayerStat = ReturnType<typeof parsePlayerStat>;
 
 const decoder = new TextDecoder();
 
 export const parsePlayerStat = (stat: playerStat) => ({
-    createdAt: stat.createdAt,
+    createdAt: new Date(stat.createdAt),
     stats: {
-        ...(JSON.parse(decoder.decode(stat.playerStats)) as PlayerStatsType),
+        ...(JSON.parse(stat.playerStats) as PlayerStatsType),
         experience: stat.experience,
         questParticipation: stat.questParticipation,
         skyblockExperience: stat.skyblockExperience,
@@ -755,11 +707,9 @@ export function diffPlayerStats(startStat: playerStat, stopStat: playerStat) {
     return stats;
 }
 
-type guildStat = Prisma.Result<
-    typeof prisma.guildStats,
-    Prisma.Args<typeof prisma.guildStats, "findUnique">,
-    "findUnique"
->;
+type guildStat = Awaited<
+    ReturnType<typeof queryGuildData>
+>["guildStats"][number];
 
 export function diffGuildStats(startStat: guildStat, stopStat: guildStat) {
     return {
