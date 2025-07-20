@@ -16,7 +16,6 @@ const fetchJson = async (url: string): Promise<any> => {
     const res = await fetch(url, { signal: AbortSignal.timeout(60000) });
     if (!res.ok) {
         console.error(await res.text(), res.status);
-        // @ts-expect-error
         throw new Error("Invalid Response Code", {
             cause: { code: res.status },
         });
@@ -33,7 +32,6 @@ const fetchBlob = async (url: string): Promise<Blob> => {
     const res = await fetch(url, { signal: AbortSignal.timeout(60000) });
     if (!res.ok) {
         console.error(await res.text(), res.status);
-        // @ts-expect-error
         throw new Error("Invalid Response Code", {
             cause: { code: res.status },
         });
