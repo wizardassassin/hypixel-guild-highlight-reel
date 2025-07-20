@@ -256,7 +256,7 @@ export async function createGuildHighlight(
         )
         .reduce((a, b) => a + b, 0);
     const numberFormat1 = new Intl.NumberFormat("en-US", {});
-    const randomizer = getSplashTextRandomizer();
+    const randomizer = getSplashTextRandomizer(data.guild.name);
     let content = `# __${highlightName}__\n`;
     content += randomizer
         .pick()
@@ -311,6 +311,5 @@ export async function createGuildHighlight(
                 ...message,
             });
         }
-        break;
     }
 }
