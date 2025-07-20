@@ -261,7 +261,7 @@ export async function createGuildHighlight(
     content += randomizer
         .pick()
         .split("\n")
-        .map((x) => `-# ${x}\n`)
+        .map((x) => `-# ${escapeMarkdown(x)}\n`)
         .join("");
     content += `## __Overall Stats__\n`;
     content += `    ⫸ **${totalExp}** Guild Experience Gained\n\n`;
