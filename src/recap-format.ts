@@ -25,58 +25,7 @@ import {
 import { DateTime } from "luxon";
 import { MojangFetcher } from "./query/skin-fetcher.js";
 import assert from "assert/strict";
-
-function getRandomText(prevText?: string) {
-    const splashTexts = [
-        "Hello World!",
-        "Boop!",
-        "Hello, ${username}!",
-        "Killed",
-        "*** stack smashing detected ***: terminated",
-        "Segmentation fault (core dumped)",
-        "NullPointerException",
-        "The cake is a lie.",
-    ].filter((x) => x !== prevText);
-    return escapeMarkdown(
-        splashTexts[Math.floor(Math.random() * splashTexts.length)]
-    );
-}
-
-function getRandomColor(prevColor?: number) {
-    const colors = [
-        Colors.Default,
-        Colors.White,
-        Colors.Aqua,
-        Colors.Green,
-        Colors.Blue,
-        Colors.Yellow,
-        Colors.Purple,
-        Colors.LuminousVividPink,
-        Colors.Fuchsia,
-        Colors.Gold,
-        Colors.Orange,
-        Colors.Red,
-        Colors.Grey,
-        Colors.Navy,
-        Colors.DarkAqua,
-        Colors.DarkGreen,
-        Colors.DarkBlue,
-        Colors.DarkPurple,
-        Colors.DarkVividPink,
-        Colors.DarkGold,
-        Colors.DarkOrange,
-        Colors.DarkRed,
-        Colors.DarkGrey,
-        Colors.DarkerGrey,
-        Colors.LightGrey,
-        Colors.DarkNavy,
-        Colors.Blurple,
-        Colors.Greyple,
-        Colors.DarkButNotBlack,
-        Colors.NotQuiteBlack,
-    ].filter((x) => x !== prevColor);
-    return colors[Math.floor(Math.random() * colors.length)];
-}
+import { getSplashTextRandomizer } from "./utils/splash-text.js";
 
 type statsEmbedDataType = {
     username: string;
@@ -307,8 +256,13 @@ export async function createGuildHighlight(
         )
         .reduce((a, b) => a + b, 0);
     const numberFormat1 = new Intl.NumberFormat("en-US", {});
+    const randomizer = getSplashTextRandomizer();
     let content = `# __${highlightName}__\n`;
-    content += `-# ${getRandomText()}\n`;
+    content += randomizer
+        .pick()
+        .split("\n")
+        .map((x) => `-# ${x}\n`)
+        .join("");
     content += `## __Overall Stats__\n`;
     content += `    ⫸ **${totalExp}** Guild Experience Gained\n\n`;
     content += `    ⫸ **${totalWins}** Total Wins\n\n`;
@@ -357,5 +311,6 @@ export async function createGuildHighlight(
                 ...message,
             });
         }
+        break;
     }
 }
