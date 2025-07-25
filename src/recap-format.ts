@@ -188,7 +188,11 @@ export async function createGuildHighlight(
         const dYest = dateYesterday.toFormat("MM/dd/yy");
         const dToday = dateToday.toFormat("MM/dd/yy");
         await sendMessage({
-            content: `No data could be found in the range ${dYest} - ${dToday}`,
+            components: [
+                new TextDisplayBuilder({
+                    content: `No data could be found in the range ${dYest} - ${dToday}`,
+                }),
+            ],
         });
         return;
     }

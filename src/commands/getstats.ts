@@ -98,7 +98,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         flags: MessageFlags.IsComponentsV2,
         ...messages[0],
     });
-    for (const message of messages) {
+    for (const message of messages.slice(1)) {
         await interaction.channel.send({
             flags: MessageFlags.IsComponentsV2,
             ...message,
