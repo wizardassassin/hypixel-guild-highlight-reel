@@ -29,7 +29,7 @@ async function seedFile(filename: string) {
     const timestamp = Number(filename.split("_")[0]);
     const rawHash = String(filename.split("_")[1]);
     const file = await fs.readFile("./blob/" + filename);
-    const json = JSON.parse((await decompressData(file)) as unknown as string);
+    const json = JSON.parse((await decompressData(file)).toString());
     const guildData = parseGuildEndpointData(json.guildData);
     const memberUUIDs = guildData.members.map((x) => x.uuid);
     const manualData = {
