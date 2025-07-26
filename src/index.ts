@@ -86,9 +86,14 @@ client.once(Events.ClientReady, (readyClient) => {
         console.error("Invalid Channel ID");
     }
     readyClient.cronIsRunning = false;
-    initCron((cronType, cronPromise) =>
-        onCron(readyClient, cronType, cronPromise)
-    );
+    if (
+        process.env.NODE_ENV === "production" ||
+        process.env.FETCH_IN_DEV !== "false"
+    ) {
+        initCron((cronType, cronPromise) =>
+            onCron(readyClient, cronType, cronPromise)
+        );
+    }
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 });
 
