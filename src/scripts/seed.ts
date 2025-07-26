@@ -14,6 +14,7 @@ import {
 } from "../query/hypixel-fetcher.js";
 import { getGuildData, updateGuild } from "../db/db-update.js";
 import { sleep } from "../utils/utils.js";
+import { decompressData } from "../utils/seed-util.js";
 
 const guildId = process.env.DISCORD_GUILD_ID;
 
@@ -28,7 +29,7 @@ async function seedFile(filename: string) {
     const timestamp = Number(filename.split("_")[0]);
     const rawHash = String(filename.split("_")[1]);
     const file = await fs.readFile("./blob/" + filename);
-    const json = JSON.parse((await lzma.decompress(file)) as unknown as string);
+    const json = JSON.parse((await decompressData(file)) as unknown as string);
     const guildData = parseGuildEndpointData(json.guildData);
     const memberUUIDs = guildData.members.map((x) => x.uuid);
     const manualData = {

@@ -14,6 +14,7 @@ import {
 import { DateTime } from "luxon";
 import { promisify } from "util";
 import { simpleRetryer, sleep } from "../utils/utils.js";
+import { compressData } from "../utils/seed-util.js";
 
 export async function createGuild(discordGuildID: string, playerUUID: string) {
     const guildData = await getGuildEndpointData(playerUUID, "PLAYER");
@@ -212,7 +213,7 @@ export async function updateGuild(
         const timestamp = date.getTime();
         await fs.writeFile(
             `./blob/${timestamp}_${hash}`,
-            (await lzma.compress(rawData, 9)) as unknown as Buffer
+            await compressData(rawData)
         );
     } else {
         rawHash = blobHash;
