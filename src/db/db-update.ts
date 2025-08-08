@@ -2,6 +2,7 @@ import db from "./db.js";
 import fs from "fs/promises";
 import crypto from "crypto";
 import zlib from "zlib";
+import lzma from "lzma-native";
 import {
     getGuildEndpointData,
     getHousingEndpointData,
@@ -13,6 +14,7 @@ import {
 import { DateTime } from "luxon";
 import { promisify } from "util";
 import { simpleRetryer, sleep } from "../utils/utils.js";
+import { compressData } from "../utils/seed-util.js";
 import { guild, guildStats, player, playerStats } from "./schema.js";
 import { eq } from "drizzle-orm";
 
@@ -210,7 +212,10 @@ export async function updateGuild(
         const hash = crypto.createHash("sha256").update(rawData).digest("hex");
         rawHash = hash;
         const timestamp = date.getTime();
-        await fs.writeFile(`./blob/${timestamp}_${hash}`, await gzip(rawData));
+        await fs.writeFile(
+            `./blob/${timestamp}_${hash}`,
+            await compressData(rawData)
+        );
     } else {
         rawHash = blobHash;
     }
