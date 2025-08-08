@@ -72,8 +72,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     const dYest = dateYesterday.toFormat("MM/dd/yy");
     const dToday = dateToday.toFormat("MM/dd/yy");
     if (
-        data?.PlayerStats?.length !== 2 &&
-        data.PlayerStats[0].id === data.PlayerStats[1].id
+        data?.playerStats?.length !== 2 &&
+        data.playerStats[0].id === data.playerStats[1].id
     ) {
         const username3 = escapeMarkdown(username2);
         await interaction.reply(
@@ -82,8 +82,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         return;
     }
     const playerData = diffPlayerStats(
-        data.PlayerStats[0],
-        data.PlayerStats[1]
+        data.playerStats[0],
+        data.playerStats[1]
     );
     const messages = await createStatsEmbed({
         username: data.username,
@@ -91,14 +91,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         prefix: data.prefix,
         color: data.color,
         diff: playerData,
-        startDate: data.PlayerStats[0].createdAt,
-        stopDate: data.PlayerStats[1].createdAt,
+        startDate: new Date(data.playerStats[0].createdAt),
+        stopDate: new Date(data.playerStats[1].createdAt),
     });
     await interaction.reply({
         flags: MessageFlags.IsComponentsV2,
         ...messages[0],
     });
-    for (const message of messages) {
+    for (const message of messages.slice(1)) {
         await interaction.channel.send({
             flags: MessageFlags.IsComponentsV2,
             ...message,

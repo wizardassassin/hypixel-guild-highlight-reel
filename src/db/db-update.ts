@@ -1,4 +1,4 @@
-import prisma from "./db.js";
+import db from "./db.js";
 import fs from "fs/promises";
 import crypto from "crypto";
 import zlib from "zlib";
@@ -15,18 +15,23 @@ import { DateTime } from "luxon";
 import { promisify } from "util";
 import { simpleRetryer, sleep } from "../utils/utils.js";
 import { compressData } from "../utils/seed-util.js";
+import { guild, guildStats, player, playerStats } from "./schema.js";
+import { eq } from "drizzle-orm";
 
 export async function createGuild(discordGuildID: string, playerUUID: string) {
     const guildData = await getGuildEndpointData(playerUUID, "PLAYER");
-    const guild = await prisma.guild.create({
-        data: {
+    const guild2 = await db
+        .insert(guild)
+        .values({
             guildIdDiscord: discordGuildID,
             guildIdHypixel: guildData.id,
             name: guildData.name,
-            createdAtHypixel: guildData.created,
-        },
-    });
-    return { id: guild.id, name: guildData.name };
+            createdAtHypixel: guildData.created.getTime(),
+        })
+        .returning({
+            id: guild.id,
+        });
+    return { id: guild2[0].id, name: guildData.name };
 }
 
 export async function getGuildMemberData<T>(
@@ -111,92 +116,88 @@ export async function updateGuild(
     const prevGuildExpMap = new Map<string, number>();
     const prevHousingMap = new Map<string, number>();
 
-    const playerDataInternal = await prisma.$transaction(
-        data.memberUUIDs.map((uuid) =>
-            prisma.player.upsert({
-                where: {
-                    uuid: uuid,
-                },
-                create: {
+    const playerDataInternal = await db.transaction(async (tx) => {
+        for (const uuid of data.memberUUIDs) {
+            await tx
+                .insert(player)
+                .values({
                     uuid: uuid,
                     username: playerMap.get(uuid).username,
                     prefix: playerMap.get(uuid).prefix,
                     color: playerMap.get(uuid).color,
-                    initialJoined: new Date(memberMap.get(uuid).joined),
-                    joined: new Date(memberMap.get(uuid).joined),
-                },
-                update: {
-                    username: playerMap.get(uuid).username,
-                    prefix: playerMap.get(uuid).prefix,
-                    color: playerMap.get(uuid).color,
-                    joined: new Date(memberMap.get(uuid).joined),
-                },
-                include: {
-                    PlayerStats: {
-                        where: {
-                            createdAt: {
-                                lte: dateYesterday,
-                            },
-                            GuildStats: {
-                                guildId: guildIdInternal,
-                            },
-                        },
-                        select: {
-                            experience: true,
-                        },
-                        orderBy: {
-                            createdAt: "desc",
-                        },
-                        take: 1,
+                    initialJoined: new Date(
+                        memberMap.get(uuid).joined
+                    ).getTime(),
+                    joined: new Date(memberMap.get(uuid).joined).getTime(),
+                })
+                .onConflictDoUpdate({
+                    target: player.uuid,
+                    set: {
+                        username: playerMap.get(uuid).username,
+                        prefix: playerMap.get(uuid).prefix,
+                        color: playerMap.get(uuid).color,
+                        joined: new Date(memberMap.get(uuid).joined).getTime(),
                     },
+                });
+        }
+        const res = await tx.query.player.findMany({
+            where: (player, { or, eq }) =>
+                or(...data.memberUUIDs.map((x) => eq(player.uuid, x))),
+            columns: {
+                id: true,
+                uuid: true,
+            },
+            with: {
+                playerStats: {
+                    where: (playerStats, { lte }) =>
+                        lte(playerStats.createdAt, dateYesterday.getTime()),
+                    orderBy: (playerStats, { desc }) =>
+                        desc(playerStats.createdAt),
+                    columns: {
+                        experience: true,
+                    },
+                    limit: 1,
                 },
-            })
-        )
-    );
-    const cookieDataInternal = await prisma.player.findMany({
-        where: {
-            OR: data.memberUUIDs.map((x) => ({ uuid: x })),
-        },
-        select: {
+            },
+        });
+        return res;
+    });
+    const cookieDataInternal = await db.query.player.findMany({
+        where: (player, { or, eq }) =>
+            or(...data.memberUUIDs.map((x) => eq(player.uuid, x))),
+        columns: {
+            id: true,
             uuid: true,
-            PlayerStats: {
-                where: {
-                    createdAt: {
-                        lte: dateSunday,
-                    },
-                    GuildStats: {
-                        guildId: guildIdInternal,
-                    },
-                },
-                select: {
+        },
+        with: {
+            playerStats: {
+                where: (playerStats, { lte }) =>
+                    lte(playerStats.createdAt, dateSunday.getTime()),
+                orderBy: (playerStats, { desc }) => desc(playerStats.createdAt),
+                columns: {
                     housingCookies: true,
                 },
-                orderBy: {
-                    createdAt: "desc",
-                },
-                take: 1,
+                limit: 1,
             },
         },
     });
     const cookieDataInternalMap = new Map(
         cookieDataInternal.map((x) => [
             x.uuid,
-            x.PlayerStats?.[0]?.housingCookies ?? 0,
+            x.playerStats?.[0]?.housingCookies ?? 0,
         ])
     );
-    for (const { id, uuid, PlayerStats } of playerDataInternal) {
+    for (const { id, uuid, playerStats } of playerDataInternal) {
         playerIdInternalMap.set(uuid, id);
-        prevGuildExpMap.set(uuid, PlayerStats?.[0]?.experience ?? 0);
+        prevGuildExpMap.set(uuid, playerStats?.[0]?.experience ?? 0);
         prevHousingMap.set(uuid, cookieDataInternalMap.get(uuid) ?? 0);
     }
-    await prisma.guild.update({
-        where: {
-            id: guildIdInternal,
-        },
-        data: {
+    await db
+        .update(guild)
+        .set({
             name: data.guildData.name,
-        },
-    });
+        })
+        .where(eq(guild.id, guildIdInternal));
     console.time("Compress");
     let rawHash: string;
     if (!blobHash) {
@@ -231,28 +232,32 @@ export async function updateGuild(
             ...playerMap.get(x).playerStats,
         } as PlayerStatsType,
     }));
-    await prisma.guildStats.create({
-        data: {
-            guildId: guildIdInternal,
-            createdAt: dateToday,
-            experience: data.guildData.exp,
-            experienceByGameType: Buffer.from(
-                JSON.stringify(data.guildData.guildExpByGameType)
-            ),
-            members: {
-                createMany: {
-                    data: playerData.map((x) => ({
-                        playerId: x.id,
-                        createdAt: dateToday,
-                        playerStats: Buffer.from(JSON.stringify(x.playerStats)),
-                        skyblockExperience: x.skyblockExperience,
-                        housingCookies: x.housingCookies,
-                        experience: x.experience,
-                        questParticipation: x.questParticipation,
-                    })),
-                },
-            },
-            rawDataHash: rawHash,
-        },
+    await db.transaction(async (tx) => {
+        const res = await tx
+            .insert(guildStats)
+            .values({
+                guildId: guildIdInternal,
+                createdAt: dateToday.getTime(),
+                experience: data.guildData.exp,
+                experienceByGameType: JSON.stringify(
+                    data.guildData.guildExpByGameType
+                ),
+                rawDataHash: rawHash,
+            })
+            .returning({
+                id: guildStats.id,
+            });
+        await tx.insert(playerStats).values(
+            playerData.map((x) => ({
+                playerId: x.id,
+                createdAt: dateToday.getTime(),
+                playerStats: JSON.stringify(x.playerStats),
+                skyblockExperience: x.skyblockExperience,
+                housingCookies: x.housingCookies,
+                experience: x.experience,
+                questParticipation: x.questParticipation,
+                guildStatsId: res[0].id,
+            }))
+        );
     });
 }

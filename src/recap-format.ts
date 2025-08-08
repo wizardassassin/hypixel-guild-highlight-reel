@@ -25,64 +25,7 @@ import {
 import { DateTime } from "luxon";
 import { MojangFetcher } from "./query/skin-fetcher.js";
 import assert from "assert/strict";
-
-function getRandomText(prevText?: string) {
-    const splashTexts = [
-        "Hello World!",
-        "<script>alert(1);</script>",
-        "' OR 1=1; DROP DATABASE mydb; --",
-        "sudo rm -rf --no-preserve-root /",
-        "Ping! Pong!",
-        "The quick brown fox jumps over the lazy dog.",
-        "Lorem ipsum",
-        "FizzBuzz",
-        "FooBar",
-        "Hello, ${username}!",
-        "Killed",
-        "Segmentation fault (core dumped)",
-        "NullPointerException",
-        "The cake is a lie.",
-    ].filter((x) => x !== prevText);
-    return escapeMarkdown(
-        splashTexts[Math.floor(Math.random() * splashTexts.length)]
-    );
-}
-
-function getRandomColor(prevColor?: number) {
-    const colors = [
-        Colors.Default,
-        Colors.White,
-        Colors.Aqua,
-        Colors.Green,
-        Colors.Blue,
-        Colors.Yellow,
-        Colors.Purple,
-        Colors.LuminousVividPink,
-        Colors.Fuchsia,
-        Colors.Gold,
-        Colors.Orange,
-        Colors.Red,
-        Colors.Grey,
-        Colors.Navy,
-        Colors.DarkAqua,
-        Colors.DarkGreen,
-        Colors.DarkBlue,
-        Colors.DarkPurple,
-        Colors.DarkVividPink,
-        Colors.DarkGold,
-        Colors.DarkOrange,
-        Colors.DarkRed,
-        Colors.DarkGrey,
-        Colors.DarkerGrey,
-        Colors.LightGrey,
-        Colors.DarkNavy,
-        Colors.Blurple,
-        Colors.Greyple,
-        Colors.DarkButNotBlack,
-        Colors.NotQuiteBlack,
-    ].filter((x) => x !== prevColor);
-    return colors[Math.floor(Math.random() * colors.length)];
-}
+import { getSplashTextRandomizer } from "./utils/splash-text.js";
 
 type statsEmbedDataType = {
     username: string;
@@ -239,34 +182,44 @@ export async function createGuildHighlight(
     );
 
     if (
-        data.guild.GuildStats.length !== 2 ||
-        data.guild.GuildStats[0].id === data.guild.GuildStats[1].id
+        data.guild.guildStats.length !== 2 ||
+        data.guild.guildStats[0].id === data.guild.guildStats[1].id
     ) {
         const dYest = dateYesterday.toFormat("MM/dd/yy");
         const dToday = dateToday.toFormat("MM/dd/yy");
         await sendMessage({
-            content: `No data could be found in the range ${dYest} - ${dToday}`,
+            components: [
+                new TextDisplayBuilder({
+                    content: `No data could be found in the range ${dYest} - ${dToday}`,
+                }),
+            ],
         });
         return;
     }
-    dateYesterday = DateTime.fromJSDate(data.guild.GuildStats[0].createdAt, {
-        zone: "America/New_York",
-    });
-    dateToday = DateTime.fromJSDate(data.guild.GuildStats[1].createdAt, {
-        zone: "America/New_York",
-    });
+    dateYesterday = DateTime.fromJSDate(
+        new Date(data.guild.guildStats[0].createdAt),
+        {
+            zone: "America/New_York",
+        }
+    );
+    dateToday = DateTime.fromJSDate(
+        new Date(data.guild.guildStats[1].createdAt),
+        {
+            zone: "America/New_York",
+        }
+    );
     const dYest = dateYesterday.toFormat("MM/dd/yy");
     const dToday = dateToday.toFormat("MM/dd/yy");
     const guildData = data.players
-        .filter((x) => x.PlayerStats.length >= 2)
+        .filter((x) => x.playerStats.length >= 2)
         .map((x) => ({
             username: x.username,
             uuid: x.uuid,
             prefix: x.prefix,
             color: x.color,
-            diff: diffPlayerStats(x.PlayerStats[0], x.PlayerStats[1]),
-            startDate: x.PlayerStats[0].createdAt,
-            stopDate: x.PlayerStats[1].createdAt,
+            diff: diffPlayerStats(x.playerStats[0], x.playerStats[1]),
+            startDate: new Date(x.playerStats[0].createdAt),
+            stopDate: new Date(x.playerStats[1].createdAt),
         }))
         .filter((x) =>
             x.diff
@@ -286,8 +239,8 @@ export async function createGuildHighlight(
                     .find((x) => x.name === "Guild Experience")?.value ?? 0)
         );
     const totalExp =
-        data.guild.GuildStats[1].experience -
-        data.guild.GuildStats[0].experience;
+        data.guild.guildStats[1].experience -
+        data.guild.guildStats[0].experience;
     const totalKills = guildData
         .map((x) =>
             x.diff
@@ -307,8 +260,13 @@ export async function createGuildHighlight(
         )
         .reduce((a, b) => a + b, 0);
     const numberFormat1 = new Intl.NumberFormat("en-US", {});
+    const randomizer = getSplashTextRandomizer(data.guild.name);
     let content = `# __${highlightName}__\n`;
-    content += `-# ${getRandomText()}\n`;
+    content += randomizer
+        .pick()
+        .split("\n")
+        .map((x) => `-# ${escapeMarkdown(x)}\n`)
+        .join("");
     content += `## __Overall Stats__\n`;
     content += `    ⫸ **${totalExp}** Guild Experience Gained\n\n`;
     content += `    ⫸ **${totalWins}** Total Wins\n\n`;

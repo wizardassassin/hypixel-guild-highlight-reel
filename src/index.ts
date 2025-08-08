@@ -11,10 +11,11 @@ import {
     Collection,
     Events,
     IntentsBitField,
+    MessageFlags,
     TextChannel,
 } from "discord.js";
 import { GenericCommandModule } from "./types/discord.js";
-import prisma from "./db/db.js";
+import db from "./db/db.js";
 import { initCron } from "./query-store.js";
 import { onCron } from "./query-informer.js";
 
@@ -33,7 +34,7 @@ const client = new Client({
 });
 
 client.commands = new Collection<string, GenericCommandModule>();
-client.db = prisma;
+client.db = db;
 
 const cwd = import.meta.dirname;
 
@@ -66,12 +67,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
         if (interaction.replied || interaction.deferred) {
             await interaction.followUp({
                 content: "There was an error while executing this command!",
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         } else {
             await interaction.reply({
                 content: "There was an error while executing this command!",
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
     }
@@ -85,9 +86,14 @@ client.once(Events.ClientReady, (readyClient) => {
         console.error("Invalid Channel ID");
     }
     readyClient.cronIsRunning = false;
-    initCron((cronType, cronPromise) =>
-        onCron(readyClient, cronType, cronPromise)
-    );
+    if (
+        process.env.NODE_ENV === "production" ||
+        process.env.FETCH_IN_DEV !== "false"
+    ) {
+        initCron((cronType, cronPromise) =>
+            onCron(readyClient, cronType, cronPromise)
+        );
+    }
     console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 });
 
