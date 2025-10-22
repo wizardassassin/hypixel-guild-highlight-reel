@@ -10,7 +10,7 @@ export async function setBlob(name: string, blob: Buffer, date?: Date) {
             ...(date && { createdAt: date.getTime() }),
         })
         .onConflictDoUpdate({
-            target: blobStorage.id,
+            target: blobStorage.name,
             set: {
                 blob: blob,
                 ...((date && { createdAt: date.getTime() }) || {
