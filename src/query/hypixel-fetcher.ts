@@ -754,6 +754,7 @@ function getArcadeWins(arcade: any) {
         Number(arcade.wins_grinch_simulator_v2 ?? 0) +
         Number(arcade.wins_halloween_simulator ?? 0) +
         Number(arcade.wins_scuba_simulator ?? 0);
+    const disastersWins = Number(arcade.disasters?.stats?.wins ?? 0);
 
     return (
         blockingDeadWins +
@@ -773,6 +774,7 @@ function getArcadeWins(arcade: any) {
         pixelPartyWins +
         throwOutWins +
         zombiesWins +
-        seasonalWins
+        seasonalWins +
+        disastersWins
     );
 }
