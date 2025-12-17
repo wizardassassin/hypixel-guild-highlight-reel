@@ -41,15 +41,27 @@ export function initCron(
     callback: (
         cronType: "DAILY" | "WEEKLY",
         cronPromise: Promise<boolean>
-    ) => any
+    ) => any | Promise<any>
 ) {
     cron.schedule(
         "55 23 * * *",
-        () =>
-            callback(
-                "DAILY",
-                new Promise((res) => dailyCron().then((res2) => res(res2)))
-            ),
+        async () => {
+            try {
+                const promise = new Promise<boolean>((res) =>
+                    dailyCron()
+                        .then((res2) => res(res2))
+                        .catch((err) => {
+                            console.error(err);
+                            return false;
+                        })
+                );
+                await callback("DAILY", promise);
+                await promise;
+            } catch (error) {
+                console.error("Cron Job Crashed");
+                console.error(error);
+            }
+        },
         {
             timezone: "America/New_York",
         }
