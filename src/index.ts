@@ -1,3 +1,4 @@
+import "./setup.js";
 import { createGuild, updateGuild } from "./db/db-update.js";
 import {
     getGuildEndpointData,
@@ -99,4 +100,9 @@ client.once(Events.ClientReady, (readyClient) => {
 
 client.on(Events.Error, console.error);
 
-client.login(token);
+try {
+    await client.login(token);
+} catch (error) {
+    console.error(error);
+    process.exit(1);
+}
