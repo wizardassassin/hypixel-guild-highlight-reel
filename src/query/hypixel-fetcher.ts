@@ -413,8 +413,8 @@ export function parsePlayerEndpointData(json: any) {
             kills: Number(stats?.MurderMystery?.kills ?? 0),
         },
         paintball: {
-            kills: Number(stats?.Paintball?.kills),
-            wins: Number(stats?.Paintball?.wins),
+            kills: Number(stats?.Paintball?.kills ?? 0),
+            wins: Number(stats?.Paintball?.wins ?? 0),
         },
         pit: {
             experience: Number(stats?.Pit?.profile?.xp ?? 0),
