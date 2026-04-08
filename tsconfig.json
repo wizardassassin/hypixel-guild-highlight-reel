@@ -6,6 +6,7 @@
         "target": "es2022",
         "skipLibCheck": true,
         "sourceMap": true,
+        "strict": false,
         // "declaration": true,
         // "declarationMap": true,
         // "baseUrl": "src",
